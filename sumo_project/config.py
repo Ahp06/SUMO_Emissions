@@ -12,7 +12,7 @@ else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
 _SUMOCMD = 'sumo-gui'
-_SUMOCFG = "mulhouse_simulation/map.sumocfg"
+_SUMOCFG = "mulhouse_simulation/osm.sumocfg"
 CELLS_NUMBER = 10
 CO2_THRESHOLD = 500000
 
