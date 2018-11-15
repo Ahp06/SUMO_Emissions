@@ -1,15 +1,16 @@
 from typing import List
 
 import traci
+from shapely.geometry import LineString
 
+import actions
 import config
-from model import Area, Vehicle
+from model import Area, Vehicle, Lane
 
 
 def init_grid(simulation_bounds, cells_number):
     width = simulation_bounds[1][0] / cells_number
     height = simulation_bounds[1][1] / cells_number
-    # TODO: change data structure?
     areas = list()
     for i in range(cells_number):
         for j in range(cells_number):
@@ -28,9 +29,17 @@ def get_all_vehicles() -> List[Vehicle]:
     for veh_id in traci.vehicle.getIDList():
         veh_pos = traci.vehicle.getPosition(veh_id)
         vehicle = Vehicle(veh_id, veh_pos)
-        vehicle.co2 = traci.vehicle.getCO2Emission(vehicle.id)
+        vehicle.co2 = traci.vehicle.getCO2Emission(vehicle.veh_id)
         vehicles.append(vehicle)
     return vehicles
+
+
+def get_all_lanes() -> List[Lane]:
+    lanes = []
+    for lane_id in traci.lane.getIDList():
+        polygon_lane = LineString(traci.lane.getShape(lane_id))
+        lanes.append(Lane(lane_id, polygon_lane))
+    return lanes
 
 
 def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
@@ -40,18 +49,27 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
                 area.emissions += vehicle.co2
         if area.emissions > config.CO2_THRESHOLD:
             # print(f'Threshold exceeded in {area.name} : {area.emissions}')
-            # factory.lock_area(area)
+            if not area.locked:
+                actions.lock_area(area, vehicles)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
+
+
+def add_lanes_to_areas(areas: List[Area]):
+    lanes = get_all_lanes()
+    for area in areas:
+        for lane in lanes:
+            if area.rectangle.intersects(lane.polygon):
+                area.add_lane(lane)
 
 
 def main():
     try:
         traci.start(config.sumo_cmd)
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
+        add_lanes_to_areas(grid)
         while traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
-            # get_emissions(grid, SUMOFactory())
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles)
     finally:

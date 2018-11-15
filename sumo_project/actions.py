@@ -1,11 +1,14 @@
-'''
+"""
 Created on 17 oct. 2018
 
 @author: Axel Huynh-Phuc, Thibaud Gasser
-'''
+"""
+from typing import Iterable
 
 import traci
 from shapely.geometry.linestring import LineString
+
+from model import Area, Vehicle
 
 
 def stop_vehicle(veh_id):
@@ -19,10 +22,10 @@ def lanes_in_area(area):
             yield lane_id
 
 
-def lock_area(area):
-    for lane_id in lanes_in_area(area):
-        print(f'Setting max speed of {lane_id} to 30.')
-        traci.lane.setMaxSpeed(lane_id, 30)
-
-    for veh_id in traci.vehicle.getIDList():
-        traci.vehicle.rerouteTraveltime(veh_id, True)
+def lock_area(area: Area, vehicles: Iterable[Vehicle]):
+    for lane in area._lanes:
+        print(f'Setting max speed of {lane.lane_id} to 30.')
+        traci.lane.setMaxSpeed(lane.lane_id, 30)
+    area.locked = True
+    for vehicle in vehicles:
+        traci.vehicle.rerouteTraveltime(vehicle.veh_id, True)
