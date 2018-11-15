@@ -26,7 +26,7 @@ def emission_for_area(area):
     # retrieve all vehicles into this area
     for veh_id in traci.vehicle.getIDList():
         pos = traci.vehicle.getPosition(veh_id)
-        if area.contains(pos):
+        if pos in area:
             area.emissions += traci.vehicle.getCO2Emission(veh_id)
 
 

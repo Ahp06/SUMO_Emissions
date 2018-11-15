@@ -12,12 +12,12 @@ class Area:
     def __eq__(self, other):
         return self.rectangle.__eq__(other)
 
+    def __contains__(self, item):
+        return self.rectangle.contains(Point(item))
+
     @property
     def bounds(self):
         return self.rectangle.bounds
-
-    def contains(self, other):
-        return self.rectangle.contains(Point(other))
 
     @classmethod
     def from_bounds(cls, xmin, ymin, xmax, ymax):

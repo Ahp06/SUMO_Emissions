@@ -14,10 +14,9 @@ class SUMOFactory(object):
         traci.vehicle.remove(veh_id, traci.constants.REMOVE_PARKING)
 
     def lanes_in_area(self, area):
-        polygon_area = area.rectangle
         for lane_id in traci.lane.getIDList():
             polygon_lane = LineString(traci.lane.getShape(lane_id))
-            if polygon_area.intersects(polygon_lane):
+            if area.rectangle.intersects(polygon_lane):
                 yield lane_id
            
     def lock_area(self, area):
