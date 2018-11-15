@@ -1,5 +1,7 @@
-from shapely.geometry import Polygon
+from typing import Tuple
+
 from shapely.geometry import Point
+from shapely.geometry import Polygon
 
 
 class Area:
@@ -13,7 +15,7 @@ class Area:
         return self.rectangle.__eq__(other)
 
     def __contains__(self, item):
-        return self.rectangle.contains(Point(item))
+        return self.rectangle.contains(item)
 
     @property
     def bounds(self):
@@ -26,3 +28,13 @@ class Area:
             (xmin, ymax),
             (xmax, ymax),
             (xmax, ymin)))
+
+
+class Vehicle:
+
+    def __init__(self, id: int, pos: Tuple[float, float]):
+        self.id = id
+        self.pos = Point(pos)
+
+    def __repr__(self) -> str:
+        return str(self.__dict__)

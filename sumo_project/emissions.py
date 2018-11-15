@@ -1,8 +1,9 @@
-import traci
-import config
+from typing import List
 
-from SUMOFactory import SUMOFactory
-from model import Area
+import traci
+
+import config
+from model import Area, Vehicle
 
 
 def init_grid(simulation_bounds, cells_number):
@@ -22,20 +23,24 @@ def init_grid(simulation_bounds, cells_number):
     return areas
 
 
-def emission_for_area(area):
-    # retrieve all vehicles into this area
+def get_all_vehicles() -> List[Vehicle]:
+    vehicles = list()
     for veh_id in traci.vehicle.getIDList():
-        pos = traci.vehicle.getPosition(veh_id)
-        if pos in area:
-            area.emissions += traci.vehicle.getCO2Emission(veh_id)
+        veh_pos = traci.vehicle.getPosition(veh_id)
+        vehicle = Vehicle(veh_id, veh_pos)
+        vehicle.co2 = traci.vehicle.getCO2Emission(vehicle.id)
+        vehicles.append(vehicle)
+    return vehicles
 
 
-def get_emissions(areas, factory):
-    for area in areas:
-        emission_for_area(area)
+def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
+    for area in grid:
+        for vehicle in vehicles:
+            if vehicle.pos in area:
+                area.emissions += vehicle.co2
         if area.emissions > config.CO2_THRESHOLD:
             # print(f'Threshold exceeded in {area.name} : {area.emissions}')
-            factory.lock_area(area)
+            # factory.lock_area(area)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
 
@@ -46,7 +51,9 @@ def main():
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
         while traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
-            get_emissions(grid, SUMOFactory())
+            # get_emissions(grid, SUMOFactory())
+            vehicles = get_all_vehicles()
+            get_emissions(grid, vehicles)
     finally:
         traci.close(False)
 
