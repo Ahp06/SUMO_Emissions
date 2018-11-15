@@ -2,7 +2,7 @@ import traci
 import config
 
 from SUMOFactory import SUMOFactory
-from area import Area
+from model import Area
 
 
 def init_grid(simulation_bounds, cells_number):
