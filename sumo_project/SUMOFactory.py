@@ -22,8 +22,8 @@ class SUMOFactory(object):
            
     def lock_area(self, area):
         for lane_id in self.lanes_in_area(area):
-            print(f'Setting max speed of {lane_id} to 30.')
-            traci.lane.setMaxSpeed(lane_id, 30)
+            print(f'Setting max speed of {lane_id} to 9.')
+            traci.lane.setMaxSpeed(lane_id, 9)
 
         for veh_id in traci.vehicle.getIDList():
             traci.vehicle.rerouteTraveltime(veh_id, True)
