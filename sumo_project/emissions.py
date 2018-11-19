@@ -5,20 +5,21 @@ from shapely.geometry import LineString
 
 import actions
 import config
+import sys
 from model import Area, Vehicle, Lane
 
+areas = list()
 
 def init_grid(simulation_bounds, cells_number):
     width = simulation_bounds[1][0] / cells_number
     height = simulation_bounds[1][1] / cells_number
-    areas = list()
     for i in range(cells_number):
         for j in range(cells_number):
             # bounds coordinates for the area : (xmin, ymin, xmax, ymax)
             ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
             area = Area(ar_bounds)
-            area.name = 'area{}{}'.format(i, j)
+            area.name = 'area {}/{}'.format(i, j)
             areas.append(area)
             traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
     return areas
@@ -47,10 +48,8 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
         for vehicle in vehicles:
             if vehicle.pos in area:
                 area.emissions += vehicle.co2
-        if area.emissions > config.CO2_THRESHOLD:
-            # print(f'Threshold exceeded in {area.name} : {area.emissions}')
-            if not area.locked:
-                actions.lock_area(area, vehicles)
+        if area.emissions > config.CO2_THRESHOLD and area.locked == False:
+            actions.lock_area(area, vehicles)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
 
@@ -68,11 +67,32 @@ def main():
         traci.start(config.sumo_cmd)
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
         add_lanes_to_areas(grid)
-        while traci.simulation.getMinExpectedNumber() > 0:
+        
+        step = 0 
+        while step < config.n_steps : #traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
+            
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles)
+            #actions.adjustEdgesWeight()
+
+            
+            step += 1 
+            sys.stdout.write(f'Simulation step =  {step}/{config.n_steps}'+'\r')
+            sys.stdout.flush()
+            
     finally:
+        total_emissions = 0 
+        for area in areas:
+            total_emissions += area.emissions
+        
+        #For 200 steps, total emissions = 42816869.054364316 mg
+        #For 400 steps, total emissions = 136020579.71122485 mg
+        
+        print(f'\n**** Total emissions (CO2) = {total_emissions} mg')
+        diff_with_lock = (136020579.71122485 - total_emissions)/136020579.71122485
+        print(f'**** Reduction percentage of CO2 emissions = {diff_with_lock*100} % ****\n')
+        
         traci.close(False)
 
 
