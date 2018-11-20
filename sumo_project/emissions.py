@@ -24,13 +24,19 @@ def init_grid(simulation_bounds, cells_number):
             traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
     return areas
 
-
+def compute_vehicle_emissions(veh_id):
+    return (traci.vehicle.getCOEmission(veh_id)
+    + traci.vehicle.getNOxEmission(veh_id)
+    + traci.vehicle.getHCEmission(veh_id)
+    + traci.vehicle.getPMxEmission(veh_id)
+    + traci.vehicle.getCO2Emission(veh_id))
+    
 def get_all_vehicles() -> List[Vehicle]:
     vehicles = list()
     for veh_id in traci.vehicle.getIDList():
         veh_pos = traci.vehicle.getPosition(veh_id)
         vehicle = Vehicle(veh_id, veh_pos)
-        vehicle.co2 = traci.vehicle.getCO2Emission(vehicle.veh_id)
+        vehicle.emissions = compute_vehicle_emissions(veh_id)
         vehicles.append(vehicle)
     return vehicles
 
@@ -47,7 +53,7 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
     for area in grid:
         for vehicle in vehicles:
             if vehicle.pos in area:
-                area.emissions += vehicle.co2
+                area.emissions += vehicle.emissions
         if area.emissions > config.CO2_THRESHOLD and area.locked == False:
             actions.lock_area(area, vehicles)
             traci.polygon.setColor(area.name, (255, 0, 0))
@@ -75,7 +81,7 @@ def main():
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles)
             #actions.adjustEdgesWeight()
-
+            #actions.rerouteEffortVehicles()
             
             step += 1 
             sys.stdout.write(f'Simulation step =  {step}/{config.n_steps}'+'\r')
@@ -86,12 +92,12 @@ def main():
         for area in areas:
             total_emissions += area.emissions
         
-        #For 200 steps, total emissions = 42816869.054364316 mg
-        #For 400 steps, total emissions = 136020579.71122485 mg
-        
-        print(f'\n**** Total emissions (CO2) = {total_emissions} mg')
-        diff_with_lock = (136020579.71122485 - total_emissions)/136020579.71122485
-        print(f'**** Reduction percentage of CO2 emissions = {diff_with_lock*100} % ****\n')
+        #Total of emissions of all pollutants in mg for 200 steps of simulation without locking areas
+        total_emissions200 = 43970763.15084749  
+                
+        print(f'\n**** Total emissions = {total_emissions} mg ****')
+        diff_with_lock = (total_emissions200 - total_emissions)/total_emissions200
+        print(f'**** Reduction percentage of emissions = {diff_with_lock*100} % ****\n')
         
         traci.close(False)
 

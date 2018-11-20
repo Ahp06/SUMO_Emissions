@@ -23,15 +23,14 @@ def lanes_in_area(area):
 def computeEdgeWeight(edge_id):
         return traci.edge.getCO2Emission(edge_id)
     
-#Useless because vehicles reroute automatically by travelTime       
-def rerouteVehicles():
+def rerouteEffortVehicles():
     for veh_id in traci.vehicle.getIDList():
-        traci.vehicle.rerouteTraveltime(veh_id,True)
+        traci.vehicle.rerouteEffort(veh_id)
                 
 def adjustEdgesWeight():
     for edge_id in traci.edge.getIDList():
         weight = computeEdgeWeight(edge_id) #by default edges weight = length/mean speed
-        traci.edge.adaptTraveltime(edge_id, weight) 
+        traci.edge.setEffort(edge_id, weight) 
 
 def lock_area(area: Area, vehicles: Iterable[Vehicle]):
     max_speed = 30
