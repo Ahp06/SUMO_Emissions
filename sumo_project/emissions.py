@@ -20,17 +20,19 @@ def init_grid(simulation_bounds, cells_number):
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
             area = Area(ar_bounds)
             area.name = 'area ({},{})'.format(i, j)
-            areas.append(area)
+            grid.append(area)
             traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
-    return areas
+    return grid
+
 
 def compute_vehicle_emissions(veh_id):
     return (traci.vehicle.getCOEmission(veh_id)
-    + traci.vehicle.getNOxEmission(veh_id)
-    + traci.vehicle.getHCEmission(veh_id)
-    + traci.vehicle.getPMxEmission(veh_id)
-    + traci.vehicle.getCO2Emission(veh_id))
-    
+            + traci.vehicle.getNOxEmission(veh_id)
+            + traci.vehicle.getHCEmission(veh_id)
+            + traci.vehicle.getPMxEmission(veh_id)
+            + traci.vehicle.getCO2Emission(veh_id))
+
+
 def get_all_vehicles() -> List[Vehicle]:
     vehicles = list()
     for veh_id in traci.vehicle.getIDList():
@@ -55,8 +57,8 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
         for vehicle in vehicles:
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
-        if config.lock_mode == True and area.emissions > config.EMISSIONS_THRESHOLD and area.locked == False:
-            actions.lock_area(area, vehicles)
+        if config.lock_mode and area.emissions > config.EMISSIONS_THRESHOLD and area.locked == False:
+            actions.lock_area(area)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
 
