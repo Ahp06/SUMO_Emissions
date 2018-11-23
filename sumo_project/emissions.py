@@ -6,7 +6,8 @@ from shapely.geometry import LineString
 import actions
 import config
 import sys
-from model import Area, Vehicle, Lane
+from model import Area, Vehicle, Lane , TrafficLight
+from traci import trafficlight
 
 
 def init_grid(simulation_bounds, cells_number):
@@ -57,17 +58,24 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
         if config.lock_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
+            
             actions.limit_speed_into_area(area, vehicles,30)
+            actions.adjust_traffic_light_phase_duration(area, 0.5)
+            
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
 
 
-def add_lanes_to_areas(areas: List[Area]):
+def add_data_to_areas(areas: List[Area]):
     lanes = get_all_lanes()
     for area in areas:
         for lane in lanes:
             if area.rectangle.intersects(lane.polygon):
                 area.add_lane(lane)
+                for tl_id in traci.trafficlight.getIDList():
+                    if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
+                        area.add_tl(TrafficLight(tl_id))
+        
 
 
 def main():
@@ -75,10 +83,8 @@ def main():
     try:
         traci.start(config.sumo_cmd)
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
-        add_lanes_to_areas(grid)
+        add_data_to_areas(grid)
                 
-        actions.adjust_traffic_light_phase_duration()
-        
         step = 0 
         while step < config.n_steps : #traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()

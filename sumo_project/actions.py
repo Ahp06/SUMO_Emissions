@@ -36,7 +36,9 @@ def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], max_speed):
         traci.lane.setMaxSpeed(lane.lane_id, max_speed/3.6)
  
         
-def adjust_traffic_light_phase_duration():
-    '''for tl_id in traci.trafficlight.getIDList():
-       print(traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id))'''
+def adjust_traffic_light_phase_duration(area,reduction_factor):
+    for tl in area._tls:
+        phaseDuration = traci.trafficlight.getPhaseDuration(tl.tl_id)
+        traci.trafficlight.setPhaseDuration(tl.tl_id, phaseDuration*reduction_factor)
+    
     

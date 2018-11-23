@@ -15,6 +15,15 @@ class Lane:
         """Overrides the default implementation"""
         return hash(self.lane_id)
 
+class TrafficLight: 
+    
+    def __init__(self, tl_id: str):
+        self.tl_id = tl_id        
+    
+    def __hash__(self):
+        """Overrides the default implementation"""
+        return hash(self.tl_id)
+    
 
 class Area:
 
@@ -24,6 +33,7 @@ class Area:
         self.name = name
         self.emissions = 0.0
         self._lanes: Set[Lane] = set()
+        self._tls: Set[TrafficLight] = set() 
 
     def __eq__(self, other):
         return self.rectangle.__eq__(other)
@@ -40,6 +50,9 @@ class Area:
 
     def add_lane(self, lane: Lane):
         self._lanes.add(lane)
+        
+    def add_tl(self, tl: TrafficLight):
+        self._tls.add(tl)
 
     def remove_lane(self, lane: Lane):
         self._lanes.remove(lane)
