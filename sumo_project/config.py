@@ -23,4 +23,9 @@ routing_mode = False
 sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', _SUMOCMD)
 sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 
-
+def showConfig():
+    return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
+    + str(f'step number = {n_steps}\n')
+    + str(f'lock mode = {lock_mode}\n')
+    + str(f'routing mode = {routing_mode}\n'))
+    

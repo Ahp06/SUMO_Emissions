@@ -15,13 +15,6 @@ def remove_vehicle(veh_id):
     traci.vehicle.remove(veh_id, traci.constants.REMOVE_PARKING)
 
 
-def lanes_in_area(area):
-    for lane_id in traci.lane.getIDList():
-        polygon_lane = LineString(traci.lane.getShape(lane_id))
-        if area.rectangle.intersects(polygon_lane):
-            yield lane_id
-
-
 def compute_edge_weight(edge_id):
     return (traci.edge.getCOEmission(edge_id)
             + traci.edge.getNOxEmission(edge_id)
@@ -36,9 +29,14 @@ def adjust_edges_weights():
         traci.edge.adaptTraveltime(edge_id, weight)
 
 
-def lock_area(area: Area):
-    max_speed = 30
+def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], max_speed):
     print(f'Setting max speed into {area.name} to {max_speed} km/h')
     area.locked = True
     for lane in area._lanes:
-        traci.lane.setMaxSpeed(lane.lane_id, max_speed / 3.6)
+        traci.lane.setMaxSpeed(lane.lane_id, max_speed/3.6)
+ 
+        
+def adjust_traffic_light_phase_duration():
+    '''for tl_id in traci.trafficlight.getIDList():
+       print(traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id))'''
+    

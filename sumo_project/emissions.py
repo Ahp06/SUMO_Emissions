@@ -39,7 +39,6 @@ def get_all_vehicles() -> List[Vehicle]:
         veh_pos = traci.vehicle.getPosition(veh_id)
         vehicle = Vehicle(veh_id, veh_pos)
         vehicle.emissions = compute_vehicle_emissions(veh_id)
-        traci.vehicle.setRoutingMode(veh_id, traci.constants.ROUTING_MODE_AGGREGATED)
         vehicles.append(vehicle)
     return vehicles
 
@@ -58,7 +57,7 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
         if config.lock_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            actions.lock_area(area)
+            actions.limit_speed_into_area(area, vehicles,30)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
 
@@ -77,9 +76,11 @@ def main():
         traci.start(config.sumo_cmd)
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
         add_lanes_to_areas(grid)
-
-        step = 0
-        while step < config.n_steps:  # traci.simulation.getMinExpectedNumber() > 0:
+                
+        actions.adjust_traffic_light_phase_duration()
+        
+        step = 0 
+        while step < config.n_steps : #traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
@@ -90,7 +91,8 @@ def main():
                 # actions.rerouteAllVehicles()
 
             step += 1
-            sys.stdout.write(f'Simulation step =  {step}/{config.n_steps}' + '\r')
+            progress = round(step/config.n_steps*100,2)
+            sys.stdout.write(f'Progress :  {progress}%'+'\r')
             sys.stdout.flush()
 
     finally:
@@ -99,14 +101,15 @@ def main():
         total_emissions = 0
         for area in grid:
             total_emissions += area.emissions
-
-        # Total of emissions of all pollutants in mg for 200 steps of simulation without locking areas
-        total_emissions200 = 43970763.15084749
-
-        print(f'\n**** Total emissions = {total_emissions} mg ****')
-        diff_with_lock = (total_emissions200 - total_emissions) / total_emissions200
-        print(f'**** Reduction percentage of emissions = {diff_with_lock*100} % ****\n')
-
-
+        
+         #Total of emissions of all pollutants in mg for 200 steps of simulation without locking areas
+        total_emissions200 = 43970763.15084749  
+                
+        print("\n**** RESULTS ****")
+        print(f'Total emissions = {total_emissions} mg')
+        diff_with_lock = (total_emissions200 - total_emissions)/total_emissions200
+        print(f'Reduction percentage of emissions = {diff_with_lock*100} %')
+        print("With the configuration :\n" + str(config.showConfig()))
+        
 if __name__ == '__main__':
     main()
