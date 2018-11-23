@@ -56,10 +56,9 @@ class Area:
 class Vehicle:
 
     def __init__(self, veh_id: int, pos: Tuple[float, float]):
-        self.emissions: float  = None
+        self.emissions: float = 0.0
         self.veh_id = veh_id
         self.pos = Point(pos)
 
     def __repr__(self) -> str:
         return str(self.__dict__)
-    
