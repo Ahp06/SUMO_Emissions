@@ -48,7 +48,8 @@ def get_all_lanes() -> List[Lane]:
     lanes = []
     for lane_id in traci.lane.getIDList():
         polygon_lane = LineString(traci.lane.getShape(lane_id))
-        lanes.append(Lane(lane_id, polygon_lane))
+        initial_max_speed = traci.lane.getMaxSpeed(lane_id)
+        lanes.append(Lane(lane_id, polygon_lane,initial_max_speed))
     return lanes
 
 
@@ -57,22 +58,21 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
         for vehicle in vehicles:
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
-        if config.lock_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            
+        if config.limit_speed_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
             actions.limit_speed_into_area(area, vehicles,30)
-            actions.adjust_traffic_light_phase_duration(area, 0.5)
-            
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
+            if config.adjust_traffic_light_mode:
+                actions.adjust_traffic_light_phase_duration(area, 0.75)
 
 
 def add_data_to_areas(areas: List[Area]):
     lanes = get_all_lanes()
     for area in areas:
-        for lane in lanes:
+        for lane in lanes: #add lanes 
             if area.rectangle.intersects(lane.polygon):
-                area.add_lane(lane)
-                for tl_id in traci.trafficlight.getIDList():
+                area.add_lane(lane) 
+                for tl_id in traci.trafficlight.getIDList(): #add traffic lights 
                     if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
                         area.add_tl(TrafficLight(tl_id))
         
@@ -92,9 +92,8 @@ def main():
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles)
 
-            if config.routing_mode:
+            if config.weight_routing_mode:
                 actions.adjust_edges_weights()
-                # actions.rerouteAllVehicles()
 
             step += 1
             progress = round(step/config.n_steps*100,2)

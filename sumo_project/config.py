@@ -17,8 +17,9 @@ CELLS_NUMBER = 10
 EMISSIONS_THRESHOLD = 500000
 n_steps = 200 
 
-lock_mode = True
-routing_mode = False
+limit_speed_mode = True
+weight_routing_mode = False
+adjust_traffic_light_mode = True
 
 sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', _SUMOCMD)
 sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
@@ -26,6 +27,7 @@ sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 def showConfig():
     return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
     + str(f'step number = {n_steps}\n')
-    + str(f'lock mode = {lock_mode}\n')
-    + str(f'routing mode = {routing_mode}\n'))
+    + str(f'limit speed mode = {limit_speed_mode}\n')
+    + str(f'weight routing mode= {weight_routing_mode}\n')
+    + str(f'adjust traffic light mode = {adjust_traffic_light_mode}\n'))
     

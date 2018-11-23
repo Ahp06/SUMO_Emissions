@@ -7,9 +7,10 @@ from shapely.geometry.base import BaseGeometry
 
 class Lane:
 
-    def __init__(self, lane_id: str, polygon: LineString):
+    def __init__(self, lane_id: str, polygon: LineString, initial_max_speed: float):
         self.polygon = polygon
         self.lane_id = lane_id
+        self.initial_max_speed = initial_max_speed
 
     def __hash__(self):
         """Overrides the default implementation"""

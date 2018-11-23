@@ -22,7 +22,6 @@ def compute_edge_weight(edge_id):
             + traci.edge.getPMxEmission(edge_id)
             + traci.edge.getCO2Emission(edge_id))
 
-
 def adjust_edges_weights():
     for edge_id in traci.edge.getIDList():
         weight = compute_edge_weight(edge_id)  # by default edges weight = length/mean speed
