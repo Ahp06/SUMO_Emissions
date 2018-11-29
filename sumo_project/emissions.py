@@ -73,8 +73,9 @@ def add_data_to_areas(areas: List[Area]):
             if area.rectangle.intersects(lane.polygon):
                 area.add_lane(lane) 
                 for tl_id in traci.trafficlight.getIDList(): #add traffic lights 
+                    logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id)
                     if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
-                        area.add_tl(TrafficLight(tl_id))
+                        area.add_tl(TrafficLight(tl_id,logics))
         
 
 

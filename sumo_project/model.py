@@ -3,6 +3,7 @@ from typing import Tuple, Set
 from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
+from traci._trafficlight import Logic
 
 
 class Lane:
@@ -18,8 +19,9 @@ class Lane:
 
 class TrafficLight: 
     
-    def __init__(self, tl_id: str):
-        self.tl_id = tl_id        
+    def __init__(self, tl_id: str, logics: Set[Logic]):
+        self.tl_id = tl_id 
+        self._logics: Set[Logic] = logics
     
     def __hash__(self):
         """Overrides the default implementation"""
