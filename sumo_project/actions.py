@@ -6,10 +6,11 @@ Created on 17 oct. 2018
 from typing import Iterable
 
 import traci
+import inspect
 from shapely.geometry.linestring import LineString
 
 from model import Area, Vehicle
-from traci._trafficlight import Logic
+from traci._trafficlight import Logic, Phase
 
 
 def remove_vehicle(veh_id):
@@ -36,12 +37,13 @@ def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], max_speed):
 
         
 def adjust_traffic_light_phase_duration(area,reduction_factor):
-    tl_first = area._tls[0]
+    #attributes = inspect.getmembers(Phase, lambda a:not(inspect.isroutine(a))) 
+    #print ([a[0] for a in attributes])
+    for tl in area._tls:
+        for logic in tl._logics:
+           phases = traci.trafficlight.Logic.getPhases(logic)
+           for phase in phases:
+               print(phase)
+    
     #phaseDuration = traci.trafficlight.getPhaseDuration(tl.tl_id)
     #traci.trafficlight.setPhaseDuration(tl.tl_id, phaseDuration*reduction_factor)
-    first_logic = tl_first._logics[0]
-    print('first logic of tl_first : ' + first_logic)
-    
-    first_logic = Logic()
-    
-    
