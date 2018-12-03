@@ -59,12 +59,15 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
         for vehicle in vehicles:
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
-        if config.limit_speed_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            actions.limit_speed_into_area(area, vehicles, config.limited_speed)
-            traci.polygon.setColor(area.name, (255, 0, 0))
-            traci.polygon.setFilled(area.name, True)
-            if config.adjust_traffic_light_mode:
-                actions.adjust_traffic_light_phase_duration(area, config.rf_trafficLights_duration)
+        if area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
+            if config.limit_speed_mode:
+                actions.limit_speed_into_area(area, vehicles, config.limited_speed)
+                traci.polygon.setColor(area.name, (255, 0, 0))
+                traci.polygon.setFilled(area.name, True)
+                if config.adjust_traffic_light_mode:
+                    actions.adjust_traffic_light_phase_duration(area, config.rf_trafficLights_duration)
+            '''if config.remove_vehicles_mode:
+                actions.remove_vehicles(vehicles)''' #Véhicules à mettre en donnée membre car variable 
 
                 
 def parsePhase(phase_repr):
@@ -133,7 +136,7 @@ def main():
         print(f'Total emissions = {total_emissions} mg')
         diff_with_lock = (total_emissions200 - total_emissions) / total_emissions200
         print(f'Reduction percentage of emissions = {diff_with_lock*100} %')
-        print("With the configuration :\n" + str(config.showConfig()))
+        print("**** With the configuration : ****\n" + str(config.showConfig()))
 
         
 if __name__ == '__main__':

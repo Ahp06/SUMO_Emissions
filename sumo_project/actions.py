@@ -11,9 +11,10 @@ from shapely.geometry.linestring import LineString
 from model import Area, Vehicle
 from traci._trafficlight import Logic
 
-
-def remove_vehicle(veh_id):
-    traci.vehicle.remove(veh_id, traci.constants.REMOVE_PARKING)
+def remove_vehicles(vehicles):
+    print(f'Removed {vehicles.size} vehicles from the simulation')
+    for vehicle in vehicles:
+        traci.vehicle.remove(vehicle.veh_id, traci.constants.REMOVE_PARKING)
 
 def compute_edge_weight(edge_id):
     return (traci.edge.getCOEmission(edge_id)

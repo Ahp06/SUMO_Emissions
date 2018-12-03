@@ -22,11 +22,14 @@ weight_routing_mode = False
 
 #Limit the speed into areas when the threshold is exceeded
 limited_speed = 30
-limit_speed_mode = True
+limit_speed_mode = False
 
 #Decrease all traffic lights duration into the area when the threshold is exceeded
 rf_trafficLights_duration = 0.2
-adjust_traffic_light_mode = True
+adjust_traffic_light_mode = False
+
+#Immediately delete all vehicles in the simulation area
+remove_vehicles_mode = True
 
 #Weight routing mode cannot be combinated with other actions 
 if weight_routing_mode:
@@ -39,7 +42,7 @@ sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 def showConfig():
     return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
     + str(f'step number = {n_steps}\n')
-    + str(f'limit speed mode = {limit_speed_mode}\n')
     + str(f'weight routing mode= {weight_routing_mode}\n')
+    + str(f'limit speed mode = {limit_speed_mode}, limited speed to {limited_speed}\n')
     + str(f'adjust traffic light mode = {adjust_traffic_light_mode} , RF = {rf_trafficLights_duration}\n'))
     
