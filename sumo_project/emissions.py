@@ -60,7 +60,7 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
         if config.limit_speed_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            actions.limit_speed_into_area(area, vehicles, 30)
+            actions.limit_speed_into_area(area, vehicles, config.limited_speed)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
             if config.adjust_traffic_light_mode:

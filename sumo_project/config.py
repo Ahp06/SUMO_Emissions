@@ -17,10 +17,13 @@ CELLS_NUMBER = 10
 EMISSIONS_THRESHOLD = 500000
 n_steps = 200 
 
-#Limit the speed into areas when the threshold is exceeded
-limit_speed_mode = True
 #Vehicles are routed according to the less polluted route
 weight_routing_mode = False
+
+#Limit the speed into areas when the threshold is exceeded
+limited_speed = 30
+limit_speed_mode = True
+
 #Decrease all traffic lights duration into the area when the threshold is exceeded
 rf_trafficLights_duration = 0.2
 adjust_traffic_light_mode = True
