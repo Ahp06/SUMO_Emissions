@@ -3,7 +3,7 @@ from typing import Tuple, Set
 from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from traci._trafficlight import Logic
+from traci._trafficlight import Logic as SUMO_Logic
 
 
 class Lane:
@@ -17,17 +17,32 @@ class Lane:
         """Overrides the default implementation"""
         return hash(self.lane_id)
 
+class Phase:
+    def __init__(self, duration: float, minDuration: float, maxDuration : float, phaseDef: str):
+        self.duration = duration 
+        self.minDuration = minDuration
+        self.maxDuration = maxDuration
+        self.phaseDef = phaseDef 
+        
+    def __repr__(self) -> str:
+        repr = f'Phase(duration:{self.duration},minDuration:{self.minDuration},maxDuration:{self.maxDuration},phaseDef:{self.phaseDef})'
+        return str(repr)
+
+class Logic:
+    def __init__(self, logic: SUMO_Logic, phases: Set[Phase]):
+        self._logic = logic
+        self._phases: Set[Phase] = phases
+
 class TrafficLight: 
     
     def __init__(self, tl_id: str, logics: Set[Logic]):
         self.tl_id = tl_id 
         self._logics: Set[Logic] = logics
-    
+        
     def __hash__(self):
         """Overrides the default implementation"""
         return hash(self.tl_id)
     
-
 class Area:
 
     def __init__(self, coords, name=''):
@@ -67,7 +82,6 @@ class Area:
             (xmin, ymax),
             (xmax, ymax),
             (xmax, ymin)))
-
 
 class Vehicle:
 

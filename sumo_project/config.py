@@ -17,9 +17,18 @@ CELLS_NUMBER = 10
 EMISSIONS_THRESHOLD = 500000
 n_steps = 200 
 
+#Limit the speed into areas when the threshold is exceeded
 limit_speed_mode = True
+#Vehicles are routed according to the less polluted route
 weight_routing_mode = False
+#Decrease all traffic lights duration into the area when the threshold is exceeded
+rf_trafficLights_duration = 0.2
 adjust_traffic_light_mode = True
+
+#Weight routing mode cannot be combinated with other actions 
+if weight_routing_mode:
+    limit_speed_mode = False
+    adjust_traffic_light_mode = False
 
 sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', _SUMOCMD)
 sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
@@ -29,5 +38,5 @@ def showConfig():
     + str(f'step number = {n_steps}\n')
     + str(f'limit speed mode = {limit_speed_mode}\n')
     + str(f'weight routing mode= {weight_routing_mode}\n')
-    + str(f'adjust traffic light mode = {adjust_traffic_light_mode}\n'))
+    + str(f'adjust traffic light mode = {adjust_traffic_light_mode} , RF = {rf_trafficLights_duration}\n'))
     

@@ -2,11 +2,12 @@ from typing import List
 
 import traci
 from shapely.geometry import LineString
+from parse import *
 
 import actions
 import config
 import sys
-from model import Area, Vehicle, Lane , TrafficLight
+from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
 
@@ -28,10 +29,10 @@ def init_grid(simulation_bounds, cells_number):
 
 def compute_vehicle_emissions(veh_id):
     return (traci.vehicle.getCOEmission(veh_id)
-            + traci.vehicle.getNOxEmission(veh_id)
-            + traci.vehicle.getHCEmission(veh_id)
-            + traci.vehicle.getPMxEmission(veh_id)
-            + traci.vehicle.getCO2Emission(veh_id))
+            +traci.vehicle.getNOxEmission(veh_id)
+            +traci.vehicle.getHCEmission(veh_id)
+            +traci.vehicle.getPMxEmission(veh_id)
+            +traci.vehicle.getCO2Emission(veh_id))
 
 
 def get_all_vehicles() -> List[Vehicle]:
@@ -49,7 +50,7 @@ def get_all_lanes() -> List[Lane]:
     for lane_id in traci.lane.getIDList():
         polygon_lane = LineString(traci.lane.getShape(lane_id))
         initial_max_speed = traci.lane.getMaxSpeed(lane_id)
-        lanes.append(Lane(lane_id, polygon_lane,initial_max_speed))
+        lanes.append(Lane(lane_id, polygon_lane, initial_max_speed))
     return lanes
 
 
@@ -59,26 +60,42 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
         if config.limit_speed_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            actions.limit_speed_into_area(area, vehicles,30)
+            actions.limit_speed_into_area(area, vehicles, 30)
             traci.polygon.setColor(area.name, (255, 0, 0))
             traci.polygon.setFilled(area.name, True)
             if config.adjust_traffic_light_mode:
-                actions.adjust_traffic_light_phase_duration(area, 0.75)
+                actions.adjust_traffic_light_phase_duration(area, config.rf_trafficLights_duration)
+
+                
+def parsePhase(phase_repr):
+    duration = search('duration: {:f}', phase_repr)
+    minDuration = search('minDuration: {:f}', phase_repr)
+    maxDuration = search('maxDuration: {:f}', phase_repr)
+    phaseDef = search('phaseDef: {}\n', phase_repr)
+
+    if phaseDef is None: phaseDef = ''
+    else : phaseDef = phaseDef[0]
+
+    return Phase(duration[0], minDuration[0], maxDuration[0], phaseDef)
 
 
 def add_data_to_areas(areas: List[Area]):
     lanes = get_all_lanes()
     for area in areas:
-        for lane in lanes: #add lanes 
+        for lane in lanes:  # add lanes 
             if area.rectangle.intersects(lane.polygon):
-                area.add_lane(lane) 
-                for tl_id in traci.trafficlight.getIDList(): #add traffic lights 
-                    logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id)
+                area.add_lane(lane)
+                for tl_id in traci.trafficlight.getIDList():  # add traffic lights 
                     if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
+                        logics = []
+                        for l in traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id): #add logics 
+                            phases = []
+                            for phase in traci.trafficlight.Logic.getPhases(l): #add phases to logics
+                                phases.append(parsePhase(phase.__repr__()))
+                            logics.append(Logic(l,phases)) 
                         area.add_tl(TrafficLight(tl_id,logics))
+            
         
-
-
 def main():
     grid = list()
     try:
@@ -100,7 +117,7 @@ def main():
             progress = round(step/config.n_steps*100,2)
             sys.stdout.write(f'Progress :  {progress}%'+'\r')
             sys.stdout.flush()
-
+            
     finally:
         traci.close(False)
 
@@ -108,14 +125,16 @@ def main():
         for area in grid:
             total_emissions += area.emissions
         
-         #Total of emissions of all pollutants in mg for 200 steps of simulation without locking areas
+         # Total of emissions of all pollutants in mg for n steps of simulation without locking areas
         total_emissions200 = 43970763.15084749  
+        total_emissions300 = 87382632.08217141
                 
         print("\n**** RESULTS ****")
         print(f'Total emissions = {total_emissions} mg')
-        diff_with_lock = (total_emissions200 - total_emissions)/total_emissions200
+        diff_with_lock = (total_emissions200 - total_emissions) / total_emissions200
         print(f'Reduction percentage of emissions = {diff_with_lock*100} %')
         print("With the configuration :\n" + str(config.showConfig()))
+
         
 if __name__ == '__main__':
     main()
