@@ -46,6 +46,7 @@ class TrafficLight:
 class Area:
 
     def __init__(self, coords, name=''):
+        self.limited_speed = False
         self.locked = False
         self.rectangle = Polygon(coords)
         self.name = name

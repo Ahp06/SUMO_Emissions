@@ -21,16 +21,19 @@ def compute_edge_weight(edge_id):
             + traci.edge.getNOxEmission(edge_id)
             + traci.edge.getHCEmission(edge_id)
             + traci.edge.getPMxEmission(edge_id)
-            + traci.edge.getCO2Emission(edge_id))
+            + traci.edge.getCO2Emission(edge_id))/(traci.edge.getLaneNumber(edge_id))
 
-def adjust_edges_weights():
+def adjust_edges_weights():     
     for edge_id in traci.edge.getIDList():
         weight = compute_edge_weight(edge_id)  # by default edges weight = length/mean speed
-        traci.edge.adaptTraveltime(edge_id, weight)
-
+        traci.edge.setEffort(edge_id, weight)
+        
+    for veh_id in traci.vehicle.getIDList():
+        traci.vehicle.rerouteEffort(veh_id)
+        
 def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], max_speed):
     print(f'Setting max speed into {area.name} to {max_speed} km/h')
-    area.locked = True
+    area.limited_speed = True
     for lane in area._lanes:
         traci.lane.setMaxSpeed(lane.lane_id, max_speed/3.6)
 
@@ -48,5 +51,15 @@ def adjust_traffic_light_phase_duration(area, reduction_factor):
         for logic in tl._logics:
             traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, modifyLogic(logic,reduction_factor))
     
-    #phaseDuration = traci.trafficlight.getPhaseDuration(tl.tl_id)
-    #traci.trafficlight.setPhaseDuration(tl.tl_id, phaseDuration*reduction_factor)
+def lock_area(area):
+    #Trying to lock area
+    vehicles_in_area = 0 
+    for lane in area._lanes:
+        vehicles_in_area += traci.lane.getLastStepVehicleNumber(lane.lane_id)
+    
+    #Waiting for the area to be empty before blocking it
+    if vehicles_in_area == 0:
+        area.locked = True
+        print(f'Area locked : {area.name}')
+        for lane in area._lanes:
+            traci.lane.setDisallowed(lane.lane_id, 'passenger')

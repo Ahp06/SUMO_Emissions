@@ -17,19 +17,22 @@ CELLS_NUMBER = 10
 EMISSIONS_THRESHOLD = 500000
 n_steps = 200 
 
-#Vehicles are routed according to the less polluted route
-weight_routing_mode = False
-
 #Limit the speed into areas when the threshold is exceeded
 limited_speed = 30
 limit_speed_mode = False
 
 #Decrease all traffic lights duration into the area when the threshold is exceeded
-rf_trafficLights_duration = 0.2
+rf_trafficLights_duration = 1.4
 adjust_traffic_light_mode = False
 
 #Immediately delete all vehicles in the simulation area
-remove_vehicles_mode = True
+remove_vehicles_mode = False
+
+#Vehicles are routed according to the less polluted route (HEAVY)
+weight_routing_mode = True
+
+#Lock the area when the threshold is exceeded (NOT FIXED)
+lock_area_mode = False 
 
 #Weight routing mode cannot be combinated with other actions 
 if weight_routing_mode:
@@ -38,6 +41,16 @@ if weight_routing_mode:
 
 sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', _SUMOCMD)
 sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
+
+# Total of emissions of all pollutants in mg for n steps of simulation without locking areas
+total_emissions200 = 43970763.15084749  
+total_emissions300 = 87382632.08217141
+
+def get_basics_emissions():
+    if n_steps == 200:
+        return total_emissions200
+    if n_steps == 300:
+        return total_emissions300
 
 def showConfig():
     return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
