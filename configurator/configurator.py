@@ -5,9 +5,12 @@ import subprocess
 
 import randomTrips
 
+# Absolute path of the directory the script is in
+SCRIPTDIR = os.path.dirname(__file__)
+STATICDIR = os.path.join(SCRIPTDIR, 'static')
 SIMNAME = 'simul'
-NETCONVERTCMD = ['netconvert', '-c', f'static/{SIMNAME}.netcfg']
-POLYCONVERTCMD = ['polyconvert', '-c', f'static/{SIMNAME}.polycfg']
+NETCONVERTCMD = ['netconvert', '-c', os.path.join(STATICDIR, f'{SIMNAME}.netcfg')]
+POLYCONVERTCMD = ['polyconvert', '-c', os.path.join(STATICDIR, f'{SIMNAME}.polycfg')]
 
 
 def clean():
@@ -22,15 +25,15 @@ def generate_scenario(out_path, name):
     print('Extracting polygons…')
     subprocess.run(POLYCONVERTCMD)
     print('Moving files')
-    shutil.move('static/simul.net.xml', os.path.join(out_path, f'{name}.net.xml'))
-    shutil.move('static/simul.poly.xml', os.path.join(out_path, f'{name}.poly.xml'))
-    shutil.copyfile('static/simul.sumocfg', os.path.join(out_path, f'{name}.sumocfg'))
+    shutil.move(os.path.join(STATICDIR, 'simul.net.xml'), os.path.join(out_path, f'{name}.net.xml'))
+    shutil.move(os.path.join(STATICDIR, 'simul.poly.xml'), os.path.join(out_path, f'{name}.poly.xml'))
+    shutil.copyfile(os.path.join(STATICDIR, 'simul.sumocfg'), os.path.join(out_path, f'{name}.sumocfg'))
     # Move log files
     logdir = os.path.join(out_path, 'log')
     os.mkdir(logdir)
-    for f in os.listdir('static'):
+    for f in os.listdir(STATICDIR):
         if f.endswith('.log'):
-            shutil.move(os.path.join('static', f), os.path.join(logdir, f))
+            shutil.move(os.path.join(STATICDIR, f), os.path.join(logdir, f))
 
 
 def generate_mobility(path, name):
