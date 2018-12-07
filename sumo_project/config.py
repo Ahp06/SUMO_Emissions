@@ -5,6 +5,7 @@ Global configuration for the simulation
 import os
 import sys
 import datetime
+import logging
 
 ###############################################################################
 ############################# SIMULATION FILE #################################
@@ -22,12 +23,24 @@ sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', _SUMOCMD)
 sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 
 ###############################################################################
-############################# LOGS OUTPUT #####################################
+################################## LOGS #######################################
 ###############################################################################
 
 now = datetime.datetime.now()
 current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
 LOG_FILENAME = f'sumo_logs_{current_date}.log'
+
+# create logger
+logger = logging.getLogger("sumo_logger")
+logger.setLevel(logging.INFO)
+# create console handler and set level to info
+handler = logging.FileHandler(LOG_FILENAME)
+# create formatter
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# add formatter to handler
+handler.setFormatter(formatter)
+# add handler to logger
+logger.addHandler(handler)
 
 ###############################################################################
 ########################## SIMULATION CONFIGURATION ###########################

@@ -1,11 +1,10 @@
 from typing import List
 
 import traci
-import logging
 import time
 
 from shapely.geometry import LineString
-from parse import *
+from parse import search
 
 import actions
 import config
@@ -13,18 +12,7 @@ import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
-# create logger
-logger = logging.getLogger("sumo_logger")
-logger.setLevel(logging.INFO)
-# create console handler and set level to info
-handler = logging.FileHandler(config.LOG_FILENAME)
-# create formatter
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-# add formatter to handler
-handler.setFormatter(formatter)
-# add handler to logger
-logger.addHandler(handler)
-
+logger = config.logger
 
 def init_grid(simulation_bounds, cells_number):
     grid = list()
@@ -101,12 +89,12 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
         if area.emissions > config.EMISSIONS_THRESHOLD: 
             
             if config.limit_speed_mode and not area.limited_speed:
-                logger.info(f'Action - Decrease of max speed into {area.name} by {config.speed_rf*100}%')
+                logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')
                 actions.limit_speed_into_area(area, vehicles, config.speed_rf)
                 traci.polygon.setColor(area.name, (255, 0, 0))
                 traci.polygon.setFilled(area.name, True)
                 if config.adjust_traffic_light_mode and not area.tls_adjusted:
-                    logger.info(f'Action - Decrease of traffic lights duration by {config.trafficLights_duration_rf*100}%')
+                    logger.info(f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf*100}%')
                     actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
             
             if config.lock_area_mode and not area.locked:
