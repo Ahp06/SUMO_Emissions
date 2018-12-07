@@ -21,9 +21,9 @@ def clean():
 
 def generate_scenario(out_path, name):
     print('Creating the network…')
-    subprocess.run(NETCONVERTCMD)
+    subprocess.run(NETCONVERTCMD, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print('Extracting polygons…')
-    subprocess.run(POLYCONVERTCMD)
+    subprocess.run(POLYCONVERTCMD, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print('Moving files')
     shutil.move(os.path.join(STATICDIR, 'simul.net.xml'), os.path.join(out_path, f'{name}.net.xml'))
     shutil.move(os.path.join(STATICDIR, 'simul.poly.xml'), os.path.join(out_path, f'{name}.poly.xml'))
