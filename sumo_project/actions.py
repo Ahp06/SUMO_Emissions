@@ -51,11 +51,9 @@ def adjust_traffic_light_phase_duration(area, reduction_factor):
             traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, modifyLogic(logic,reduction_factor))
     
 def count_vehicles_in_area(area):
-    #Trying to lock area
     vehicles_in_area = 0 
     for lane in area._lanes:
         vehicles_in_area += traci.lane.getLastStepVehicleNumber(lane.lane_id)
-    
     return vehicles_in_area
 
 def lock_area(area):

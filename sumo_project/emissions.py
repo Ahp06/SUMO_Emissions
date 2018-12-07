@@ -61,8 +61,6 @@ def parsePhase(phase_repr):
     return Phase(duration[0], minDuration[0], maxDuration[0], phaseDef)
 
 def add_data_to_areas(areas: List[Area]):
-    
-    
     lanes = get_all_lanes()
     for area in areas:
         for lane in lanes:  # add lanes 
@@ -146,7 +144,9 @@ def main():
             
     finally:
         traci.close(False)
-        logger.info('End of the simulation')
+        simulation_time = round(time.perf_counter() - start,2)
+        logger.info(f'End of the simulation ({simulation_time}s)')
+        
         total_emissions = 0
         for area in grid:
             total_emissions += area.emissions

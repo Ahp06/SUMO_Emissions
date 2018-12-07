@@ -26,7 +26,7 @@ sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 ###############################################################################
 
 now = datetime.datetime.now()
-current_date = now.strftime("%Y_%m_%d_%H_%M")
+current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
 LOG_FILENAME = f'sumo_logs_{current_date}.log'
 
 ###############################################################################
@@ -43,11 +43,11 @@ n_steps = 200
 
 #Limit the speed into areas when the threshold is exceeded
 speed_rf = 0.1
-limit_speed_mode = False
+limit_speed_mode = True
 
 #Decrease all traffic lights duration into the area when the threshold is exceeded
 trafficLights_duration_rf = 0.2
-adjust_traffic_light_mode = False
+adjust_traffic_light_mode = True
 
 #Immediately delete all vehicles in the simulation area
 remove_vehicles_mode = False
@@ -56,7 +56,7 @@ remove_vehicles_mode = False
 weight_routing_mode = False
 
 #Lock the area when the threshold is exceeded (NOT FIXED)
-lock_area_mode = True 
+lock_area_mode = False 
 
 #Weight routing mode cannot be combinated with other actions 
 if weight_routing_mode:
