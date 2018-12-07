@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <type-files value="typemap/osmNetconvert.typ.xml,typemap/osmNetconvertUrbanDe.typ.xml,typemap/osmNetconvertPedestrians.typ.xml,typemap/osmNetconvertBicycle.typ.xml,typemap/osmBidiRailNetconvert.typ.xml" />
+        <osm-files value="simul.raw.osm" />
+    </input>
+
+    <output>
+        <output-prefix value="simul." />
+        <output-file value="net.xml"/>
+    </output>
+
+    <tls_building>
+        <tls.join value="true"/>
+        <tls.guess-signals value="true"/>
+        <tls.default-type value="actuated"/>
+        <tls.min-dur value="5"/>
+        <tls.max-dur value="30"/>
+    </tls_building>
+
+    <ramp_guessing>
+        <ramps.guess value="true"/>
+    </ramp_guessing>
+
+    <processing>
+        <geometry.remove value="true"/>
+        <roundabouts.guess value="true"/>
+        <junctions.join value="true"/>
+        <junctions.limit-turn-speed value="1"/>
+        <crossings.guess value="true"/>
+        <walkingareas value="false"/>
+        <osm.elevation value="true"/>
+        <no-turnarounds value="false"/>
+        <no-turnarounds.tls value="true"/>
+        <no-turnarounds.except-deadend value="true"/>
+        <no-internal-links value="false"/>
+        <ignore-errors value="false"/>
+        <ignore-errors.connections value="false"/>
+        <show-errors.connections-first-try value="true"/>
+    </processing>
+
+    <building_defaults>
+        <default.crossing-width value="2.0"/>
+    </building_defaults>
+
+    <report>
+        <verbose value="true"/>
+        <log value="netconvert.log"/>
+    </report>
+
+</configuration>
