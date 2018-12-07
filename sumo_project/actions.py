@@ -11,11 +11,6 @@ from shapely.geometry.linestring import LineString
 from model import Area, Vehicle
 from traci._trafficlight import Logic
 
-def remove_vehicles(vehicles):
-    print(f'Removed {vehicles.size} vehicles from the simulation')
-    for vehicle in vehicles:
-        traci.vehicle.remove(vehicle.veh_id, traci.constants.REMOVE_PARKING)
-
 def compute_edge_weight(edge_id):
     return (traci.edge.getCOEmission(edge_id)
             + traci.edge.getNOxEmission(edge_id)
@@ -60,3 +55,24 @@ def lock_area(area):
     area.locked = True
     for lane in area._lanes:
         traci.lane.setDisallowed(lane.lane_id, 'passenger')
+        
+def reverse_actions(area):
+    #Reset max speed to original 
+    if not area.limited_speed:
+        area.limited_speed = False
+        for lane in area.lanes:
+            traci.lane.setMaxSpeed(lane.lane_id, lane.initial_max_speed / 3.6)
+    
+    #Reset traffic lights initial duration  
+    if not area.tls_adjusted:
+        area.tls_adjusted = False
+        for initial_logic in tl._logics:
+            traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, initial_logic)
+    
+    #Unlock the area 
+    if not area.locked:
+        area.locked = False
+        for lane in area._lanes:
+            traci.lane.setAllowed(lane.lane_id, '') #empty means all classes are allowed 
+            
+    

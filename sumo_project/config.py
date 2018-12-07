@@ -41,6 +41,9 @@ n_steps = 200
 ########################## ACTIONS CONFIGURATION ##############################
 ###############################################################################
 
+#Set this mode to True if you want running a basic simulation without actions 
+without_actions_mode = False 
+
 #Limit the speed into areas when the threshold is exceeded
 speed_rf = 0.1
 limit_speed_mode = True
@@ -48,9 +51,6 @@ limit_speed_mode = True
 #Decrease all traffic lights duration into the area when the threshold is exceeded
 trafficLights_duration_rf = 0.2
 adjust_traffic_light_mode = True
-
-#Immediately delete all vehicles in the simulation area
-remove_vehicles_mode = False
 
 #Vehicles are routed according to the less polluted route (HEAVY)
 weight_routing_mode = False
@@ -62,6 +62,13 @@ lock_area_mode = False
 if weight_routing_mode:
     limit_speed_mode = False
     adjust_traffic_light_mode = False
+    
+#If without_actions_mode is choosen 
+if without_actions_mode:
+    limit_speed_mode = False
+    adjust_traffic_light_mode = False
+    weight_routing_mode = False
+    lock_area_mode = False
 
 ###############################################################################
 ########################## SIMULATION REFERENCES ##############################
@@ -70,6 +77,8 @@ if weight_routing_mode:
 # Total of emissions of all pollutants in mg for n steps of simulation without locking areas
 total_emissions200 = 43970763.15084749  
 total_emissions300 = 87382632.08217141
+total_emissions400 = 140757491.8489904
+total_emissions500 = 202817535.43856794
 
 ###############################################################################
 ########################## CONFIGURATION METHODS ##############################
@@ -80,8 +89,12 @@ def get_basics_emissions():
         return total_emissions200
     if n_steps == 300:
         return total_emissions300
+    if n_steps == 400:
+        return total_emissions400
+    if n_steps == 500:
+        return total_emissions500
 
-def showConfig():
+def show_config():
     return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
     + str(f'step number = {n_steps}\n')
     + str(f'weight routing mode = {weight_routing_mode}\n')

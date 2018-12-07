@@ -49,7 +49,7 @@ def get_all_lanes() -> List[Lane]:
         lanes.append(Lane(lane_id, polygon_lane, initial_max_speed))
     return lanes
 
-def parsePhase(phase_repr):
+def parse_phase(phase_repr):
     duration = search('duration: {:f}', phase_repr)
     minDuration = search('minDuration: {:f}', phase_repr)
     maxDuration = search('maxDuration: {:f}', phase_repr)
@@ -72,7 +72,7 @@ def add_data_to_areas(areas: List[Area]):
                         for l in traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id): #add logics 
                             phases = []
                             for phase in traci.trafficlight.Logic.getPhases(l): #add phases to logics
-                                phases.append(parsePhase(phase.__repr__()))
+                                phases.append(parse_phase(phase.__repr__()))
                             logics.append(Logic(l,phases)) 
                         area.add_tl(TrafficLight(tl_id,logics))
 
@@ -153,11 +153,12 @@ def main():
                  
         logger.info(f'Total emissions = {total_emissions} mg')
         
-        ref = config.get_basics_emissions()
-        diff_with_actions = (ref - total_emissions)/ref
-            
-        logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
-        logger.info('With the configuration : \n' + str(config.showConfig()))
+        if not config.without_actions_mode:
+            ref = config.get_basics_emissions()
+            diff_with_actions = (ref - total_emissions)/ref    
+            logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
+        
+        logger.info('With the configuration : \n' + str(config.show_config()))
         logger.info('Logs END')
 
         
