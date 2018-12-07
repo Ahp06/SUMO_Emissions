@@ -30,7 +30,8 @@ def generate_scenario(out_path, name):
     shutil.copyfile(os.path.join(STATICDIR, 'simul.sumocfg'), os.path.join(out_path, f'{name}.sumocfg'))
     # Move log files
     logdir = os.path.join(out_path, 'log')
-    os.mkdir(logdir)
+    if not os.path.exists(logdir):
+        os.mkdir(logdir)
     for f in os.listdir(STATICDIR):
         if f.endswith('.log'):
             shutil.move(os.path.join(STATICDIR, f), os.path.join(logdir, f))
