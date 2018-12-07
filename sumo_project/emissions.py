@@ -1,13 +1,18 @@
 from typing import List
 
 import traci
+import time
+
 from shapely.geometry import LineString
+from parse import search
 
 import actions
 import config
 import sys
-from model import Area, Vehicle, Lane
+from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
+from traci import trafficlight
 
+logger = config.logger
 
 def init_grid(simulation_bounds, cells_number):
     grid = list()
@@ -19,18 +24,52 @@ def init_grid(simulation_bounds, cells_number):
             ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
             area = Area(ar_bounds)
-            area.name = 'area ({},{})'.format(i, j)
+            area.name = 'Area ({},{})'.format(i, j)
             grid.append(area)
             traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
     return grid
 
+def get_all_lanes() -> List[Lane]:
+    lanes = []
+    for lane_id in traci.lane.getIDList():
+        polygon_lane = LineString(traci.lane.getShape(lane_id))
+        initial_max_speed = traci.lane.getMaxSpeed(lane_id)
+        lanes.append(Lane(lane_id, polygon_lane, initial_max_speed))
+    return lanes
+
+def parse_phase(phase_repr):
+    duration = search('duration: {:f}', phase_repr)
+    minDuration = search('minDuration: {:f}', phase_repr)
+    maxDuration = search('maxDuration: {:f}', phase_repr)
+    phaseDef = search('phaseDef: {}\n', phase_repr)
+
+    if phaseDef is None: phaseDef = ''
+    else : phaseDef = phaseDef[0]
+
+    return Phase(duration[0], minDuration[0], maxDuration[0], phaseDef)
+
+def add_data_to_areas(areas: List[Area]):
+    lanes = get_all_lanes()
+    for area in areas:
+        for lane in lanes:  # add lanes 
+            if area.rectangle.intersects(lane.polygon):
+                area.add_lane(lane)
+                for tl_id in traci.trafficlight.getIDList():  # add traffic lights 
+                    if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
+                        logics = []
+                        for l in traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id): #add logics 
+                            phases = []
+                            for phase in traci.trafficlight.Logic.getPhases(l): #add phases to logics
+                                phases.append(parse_phase(phase.__repr__()))
+                            logics.append(Logic(l,phases)) 
+                        area.add_tl(TrafficLight(tl_id,logics))
 
 def compute_vehicle_emissions(veh_id):
     return (traci.vehicle.getCOEmission(veh_id)
-            + traci.vehicle.getNOxEmission(veh_id)
-            + traci.vehicle.getHCEmission(veh_id)
-            + traci.vehicle.getPMxEmission(veh_id)
-            + traci.vehicle.getCO2Emission(veh_id))
+            +traci.vehicle.getNOxEmission(veh_id)
+            +traci.vehicle.getHCEmission(veh_id)
+            +traci.vehicle.getPMxEmission(veh_id)
+            +traci.vehicle.getCO2Emission(veh_id))
 
 
 def get_all_vehicles() -> List[Vehicle]:
@@ -39,74 +78,77 @@ def get_all_vehicles() -> List[Vehicle]:
         veh_pos = traci.vehicle.getPosition(veh_id)
         vehicle = Vehicle(veh_id, veh_pos)
         vehicle.emissions = compute_vehicle_emissions(veh_id)
-        traci.vehicle.setRoutingMode(veh_id, traci.constants.ROUTING_MODE_AGGREGATED)
         vehicles.append(vehicle)
     return vehicles
-
-
-def get_all_lanes() -> List[Lane]:
-    lanes = []
-    for lane_id in traci.lane.getIDList():
-        polygon_lane = LineString(traci.lane.getShape(lane_id))
-        lanes.append(Lane(lane_id, polygon_lane))
-    return lanes
-
 
 def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
     for area in grid:
         for vehicle in vehicles:
             if vehicle.pos in area:
                 area.emissions += vehicle.emissions
-        if config.lock_mode and area.emissions > config.EMISSIONS_THRESHOLD and not area.locked:
-            actions.lock_area(area)
-            traci.polygon.setColor(area.name, (255, 0, 0))
-            traci.polygon.setFilled(area.name, True)
-
-
-def add_lanes_to_areas(areas: List[Area]):
-    lanes = get_all_lanes()
-    for area in areas:
-        for lane in lanes:
-            if area.rectangle.intersects(lane.polygon):
-                area.add_lane(lane)
-
+        if area.emissions > config.EMISSIONS_THRESHOLD: 
+            
+            if config.limit_speed_mode and not area.limited_speed:
+                logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')
+                actions.limit_speed_into_area(area, vehicles, config.speed_rf)
+                traci.polygon.setColor(area.name, (255, 0, 0))
+                traci.polygon.setFilled(area.name, True)
+                if config.adjust_traffic_light_mode and not area.tls_adjusted:
+                    logger.info(f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf*100}%')
+                    actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
+            
+            if config.lock_area_mode and not area.locked:
+                if actions.count_vehicles_in_area(area):
+                    logger.info(f'Action - {area.name} blocked')
+                    actions.lock_area(area)
 
 def main():
     grid = list()
     try:
         traci.start(config.sumo_cmd)
+        
+        logger.info('Loading data for the simulation')
+        start = time.perf_counter()
+       
         grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
-        add_lanes_to_areas(grid)
-
-        step = 0
-        while step < config.n_steps:  # traci.simulation.getMinExpectedNumber() > 0:
+        add_data_to_areas(grid)
+        
+        loading_time = round(time.perf_counter() - start,2)
+        logger.info(f'Data loaded ({loading_time}s)')
+        
+        logger.info('Start of the simulation')
+        step = 0 
+        while step < config.n_steps : #traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles)
 
-            if config.routing_mode:
+            if config.weight_routing_mode:
+                logger.info('Action - Lane weights adjusted')
                 actions.adjust_edges_weights()
-                # actions.rerouteAllVehicles()
 
             step += 1
-            sys.stdout.write(f'Simulation step =  {step}/{config.n_steps}' + '\r')
-            sys.stdout.flush()
-
+            
     finally:
         traci.close(False)
-
+        simulation_time = round(time.perf_counter() - start,2)
+        logger.info(f'End of the simulation ({simulation_time}s)')
+        
         total_emissions = 0
         for area in grid:
             total_emissions += area.emissions
+                 
+        logger.info(f'Total emissions = {total_emissions} mg')
+        
+        if not config.without_actions_mode:
+            ref = config.get_basics_emissions()
+            diff_with_actions = (ref - total_emissions)/ref    
+            logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
+        
+        logger.info('With the configuration : \n' + str(config.show_config()))
+        logger.info('Logs END')
 
-        # Total of emissions of all pollutants in mg for 200 steps of simulation without locking areas
-        total_emissions200 = 43970763.15084749
-
-        print(f'\n**** Total emissions = {total_emissions} mg ****')
-        diff_with_lock = (total_emissions200 - total_emissions) / total_emissions200
-        print(f'**** Reduction percentage of emissions = {diff_with_lock*100} % ****\n')
-
-
+        
 if __name__ == '__main__':
     main()
