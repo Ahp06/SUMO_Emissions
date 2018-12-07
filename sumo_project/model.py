@@ -48,6 +48,7 @@ class Area:
     def __init__(self, coords, name=''):
         self.limited_speed = False
         self.locked = False
+        self.tls_adjusted = False
         self.rectangle = Polygon(coords)
         self.name = name
         self.emissions = 0.0

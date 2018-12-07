@@ -31,11 +31,10 @@ def adjust_edges_weights():
     for veh_id in traci.vehicle.getIDList():
         traci.vehicle.rerouteEffort(veh_id)
         
-def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], max_speed):
-    print(f'Setting max speed into {area.name} to {max_speed} km/h')
+def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], speed_rf):
     area.limited_speed = True
     for lane in area._lanes:
-        traci.lane.setMaxSpeed(lane.lane_id, max_speed/3.6)
+        traci.lane.setMaxSpeed(lane.lane_id, speed_rf * lane.initial_max_speed)
 
 def modifyLogic(logic, rf): #rf for "reduction factor" 
     new_phases = [] 
@@ -46,20 +45,20 @@ def modifyLogic(logic, rf): #rf for "reduction factor"
     return traci.trafficlight.Logic("new-program", 0 , 0 , 0 , new_phases)    
 
 def adjust_traffic_light_phase_duration(area, reduction_factor):
-    print(f'Decrease of traffic lights duration by a factor of {reduction_factor}')
+    area.tls_adjusted = True
     for tl in area._tls:
         for logic in tl._logics:
             traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, modifyLogic(logic,reduction_factor))
     
-def lock_area(area):
+def count_vehicles_in_area(area):
     #Trying to lock area
     vehicles_in_area = 0 
     for lane in area._lanes:
         vehicles_in_area += traci.lane.getLastStepVehicleNumber(lane.lane_id)
     
-    #Waiting for the area to be empty before blocking it
-    if vehicles_in_area == 0:
-        area.locked = True
-        print(f'Area locked : {area.name}')
-        for lane in area._lanes:
-            traci.lane.setDisallowed(lane.lane_id, 'passenger')
+    return vehicles_in_area
+
+def lock_area(area):
+    area.locked = True
+    for lane in area._lanes:
+        traci.lane.setDisallowed(lane.lane_id, 'passenger')
