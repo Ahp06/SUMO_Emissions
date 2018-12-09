@@ -7,11 +7,12 @@ from shapely.geometry import LineString
 from parse import search
 
 import actions
-import config
+from config import config
 import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
+config = config('C:\\Users\\Admin\\Desktop\\config.json')
 logger = config.logger
 
 def init_grid(simulation_bounds, areas_number):
