@@ -12,8 +12,9 @@ import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
-config = config('C:\\Users\\Admin\\Desktop\\config.json')
-logger = config.logger
+config = config('config.json')
+config.init_traci()
+logger = config.init_logger()
 
 def init_grid(simulation_bounds, areas_number):
     grid = list()
@@ -155,7 +156,7 @@ def main():
                 diff_with_actions = (ref - total_emissions)/ref    
                 logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
         
-        logger.info('With the configuration : \n' + str(config.show_config()))
+        logger.info(f'With the configuration : \n{config}')
         logger.info('Logs END')
 
         
