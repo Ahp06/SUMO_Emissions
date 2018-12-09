@@ -14,12 +14,15 @@ from traci import trafficlight
 
 logger = config.logger
 
-def init_grid(simulation_bounds, cells_number):
+def init_grid(simulation_bounds, areas_number):
+    """
+    Create all areas according to simulation bounds and the areas number choosen 
+    """
     grid = list()
-    width = simulation_bounds[1][0] / cells_number
-    height = simulation_bounds[1][1] / cells_number
-    for i in range(cells_number):
-        for j in range(cells_number):
+    width = simulation_bounds[1][0] / areas_number
+    height = simulation_bounds[1][1] / areas_number
+    for i in range(areas_number):
+        for j in range(areas_number):
             # bounds coordinates for the area : (xmin, ymin, xmax, ymax)
             ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
@@ -81,13 +84,17 @@ def get_all_vehicles() -> List[Vehicle]:
         vehicles.append(vehicle)
     return vehicles
 
-def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
+def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
     for area in grid:
+        vehicle_emissions = 0
         for vehicle in vehicles:
             if vehicle.pos in area:
-                area.emissions += vehicle.emissions
-        if area.emissions > config.EMISSIONS_THRESHOLD: 
-            
+                vehicle_emissions += vehicle.emissions
+                
+        area.emissions_by_step.append(vehicle_emissions)
+        
+        if area.sum_emissions_by_step(current_step, config.window_size) > config.emissions_threshold: 
+                
             if config.limit_speed_mode and not area.limited_speed:
                 logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')
                 actions.limit_speed_into_area(area, vehicles, config.speed_rf)
@@ -96,21 +103,22 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle]):
                 if config.adjust_traffic_light_mode and not area.tls_adjusted:
                     logger.info(f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf*100}%')
                     actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
-            
+                
             if config.lock_area_mode and not area.locked:
                 if actions.count_vehicles_in_area(area):
                     logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
 
+
 def main():
     grid = list()
     try:
         traci.start(config.sumo_cmd)
-        
+        logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
        
-        grid = init_grid(traci.simulation.getNetBoundary(), config.CELLS_NUMBER)
+        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number)
         add_data_to_areas(grid)
         
         loading_time = round(time.perf_counter() - start,2)
@@ -122,7 +130,7 @@ def main():
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
-            get_emissions(grid, vehicles)
+            get_emissions(grid, vehicles,step)
 
             if config.weight_routing_mode:
                 logger.info('Action - Lane weights adjusted')
@@ -137,14 +145,15 @@ def main():
         
         total_emissions = 0
         for area in grid:
-            total_emissions += area.emissions
-                 
+            total_emissions += area.sum_all_emissions()
+    
         logger.info(f'Total emissions = {total_emissions} mg')
         
-        if not config.without_actions_mode:
+        if not config.without_actions_mode :
             ref = config.get_basics_emissions()
-            diff_with_actions = (ref - total_emissions)/ref    
-            logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
+            if not (ref is None):
+                diff_with_actions = (ref - total_emissions)/ref    
+                logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
         
         logger.info('With the configuration : \n' + str(config.show_config()))
         logger.info('Logs END')

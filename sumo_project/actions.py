@@ -3,13 +3,14 @@ Created on 17 oct. 2018
 
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
+import traci
+from traci._trafficlight import Logic
 from typing import Iterable
 
-import traci
 from shapely.geometry.linestring import LineString
 
 from model import Area, Vehicle
-from traci._trafficlight import Logic
+
 
 def compute_edge_weight(edge_id):
     return (traci.edge.getCOEmission(edge_id)

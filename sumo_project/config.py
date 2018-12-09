@@ -2,15 +2,15 @@
 Global configuration for the simulation
 """
 
-import os
-import sys
 import datetime
 import logging
+import os
+import sys
+
 
 ###############################################################################
 ############################# SIMULATION FILE #################################
 ###############################################################################
-
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(tools)
@@ -28,13 +28,13 @@ sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 
 now = datetime.datetime.now()
 current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
-LOG_FILENAME = f'sumo_logs_{current_date}.log'
+log_filename = f'sumo_logs_{current_date}.log'
 
 # create logger
 logger = logging.getLogger("sumo_logger")
 logger.setLevel(logging.INFO)
-# create console handler and set level to info
-handler = logging.FileHandler(LOG_FILENAME)
+# create handler and set level to info
+handler = logging.FileHandler(log_filename)
 # create formatter
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 # add formatter to handler
@@ -46,9 +46,10 @@ logger.addHandler(handler)
 ########################## SIMULATION CONFIGURATION ###########################
 ###############################################################################
 
-CELLS_NUMBER = 10
-EMISSIONS_THRESHOLD = 500000
+areas_number = 10 # Simulation boundary will be divided into areas_number x areas_number areas 
+emissions_threshold = 500000
 n_steps = 200 
+window_size = 100
 
 ###############################################################################
 ########################## ACTIONS CONFIGURATION ##############################
@@ -88,28 +89,27 @@ if without_actions_mode:
 ###############################################################################
 
 # Total of emissions of all pollutants in mg for n steps of simulation without locking areas
-total_emissions200 = 43970763.15084749  
-total_emissions300 = 87382632.08217141
-total_emissions400 = 140757491.8489904
-total_emissions500 = 202817535.43856794
+# These constants are simulation dependant, you must change them according to your simulation 
+total_emissions100 = 13615949.148296086
+total_emissions200 = 43970763.15084738
+total_emissions300 = 87382632.0821697
 
 ###############################################################################
 ########################## CONFIGURATION METHODS ##############################
 ###############################################################################
 
 def get_basics_emissions():
+    if n_steps == 100:
+        return total_emissions100
     if n_steps == 200:
         return total_emissions200
     if n_steps == 300:
         return total_emissions300
-    if n_steps == 400:
-        return total_emissions400
-    if n_steps == 500:
-        return total_emissions500
 
 def show_config():
-    return (str(f'Grid : {CELLS_NUMBER}x{CELLS_NUMBER}\n')
+    return (str(f'Grid : {areas_number}x{areas_number}\n')
     + str(f'step number = {n_steps}\n')
+    + str(f'window size = {window_size}\n')
     + str(f'weight routing mode = {weight_routing_mode}\n')
     + str(f'lock area mode = {lock_area_mode}\n')
     + str(f'limit speed mode = {limit_speed_mode}, RF = {speed_rf*100}%\n')
