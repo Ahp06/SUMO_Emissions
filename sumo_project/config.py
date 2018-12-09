@@ -76,6 +76,7 @@ lock_area_mode = False
 if weight_routing_mode:
     limit_speed_mode = False
     adjust_traffic_light_mode = False
+    lock_area_mode = False
     
 #If without_actions_mode is choosen 
 if without_actions_mode:

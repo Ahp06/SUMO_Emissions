@@ -108,6 +108,9 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
                 if actions.count_vehicles_in_area(area):
                     logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
+        
+        else:
+            actions.reverse_actions(area)
 
 
 def main():
@@ -133,7 +136,6 @@ def main():
             get_emissions(grid, vehicles,step)
 
             if config.weight_routing_mode:
-                logger.info('Action - Lane weights adjusted')
                 actions.adjust_edges_weights()
 
             step += 1

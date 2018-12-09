@@ -23,7 +23,7 @@ def adjust_edges_weights():
     for edge_id in traci.edge.getIDList():
         weight = compute_edge_weight(edge_id)  # by default edges weight = length/mean speed
         traci.edge.setEffort(edge_id, weight)
-        
+    
     for veh_id in traci.vehicle.getIDList():
         traci.vehicle.rerouteEffort(veh_id)
         
@@ -59,19 +59,20 @@ def lock_area(area):
         
 def reverse_actions(area):
     #Reset max speed to original 
-    if not area.limited_speed:
+    if area.limited_speed:
         area.limited_speed = False
-        for lane in area.lanes:
-            traci.lane.setMaxSpeed(lane.lane_id, lane.initial_max_speed / 3.6)
+        for lane in area._lanes:
+            traci.lane.setMaxSpeed(lane.lane_id, lane.initial_max_speed)
     
     #Reset traffic lights initial duration  
-    if not area.tls_adjusted:
+    if area.tls_adjusted:
         area.tls_adjusted = False
-        for initial_logic in tl._logics:
-            traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, initial_logic)
+        for tl in area._tls:
+            for initial_logic in tl._logics:
+                traci.trafficlights.setCompleteRedYellowGreenDefinition(tl.tl_id, initial_logic._logic)
     
     #Unlock the area 
-    if not area.locked:
+    if area.locked:
         area.locked = False
         for lane in area._lanes:
             traci.lane.setAllowed(lane.lane_id, '') #empty means all classes are allowed 
