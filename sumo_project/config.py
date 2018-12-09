@@ -28,7 +28,7 @@ sumo_cmd = [sumo_binary, "-c", _SUMOCFG]
 
 now = datetime.datetime.now()
 current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
-log_filename = f'sumo_logs_{current_date}.log'
+log_filename = f'logs/sumo_logs_{current_date}.log'
 
 # create logger
 logger = logging.getLogger("sumo_logger")

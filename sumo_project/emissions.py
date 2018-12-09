@@ -15,9 +15,6 @@ from traci import trafficlight
 logger = config.logger
 
 def init_grid(simulation_bounds, areas_number):
-    """
-    Create all areas according to simulation bounds and the areas number choosen 
-    """
     grid = list()
     width = simulation_bounds[1][0] / areas_number
     height = simulation_bounds[1][1] / areas_number
@@ -93,7 +90,7 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
                 
         area.emissions_by_step.append(vehicle_emissions)
         
-        if area.sum_emissions_by_step(current_step, config.window_size) > config.emissions_threshold: 
+        if area.sum_emissions_into_window(current_step, config.window_size) >= config.emissions_threshold: 
                 
             if config.limit_speed_mode and not area.limited_speed:
                 logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')

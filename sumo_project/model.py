@@ -83,7 +83,7 @@ class Area:
             sum += emission
         return sum 
     
-    def sum_emissions_by_step(self, current_step, window_size):
+    def sum_emissions_into_window(self, current_step, window_size):
         sum = 0
         q = current_step // window_size #Returns the integral part of the quotient
         for i in range(q*window_size, current_step):
