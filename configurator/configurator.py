@@ -2,6 +2,8 @@
 import os
 import shutil
 import subprocess
+import tempfile
+from xml.etree import ElementTree
 
 import randomTrips
 
@@ -17,6 +19,30 @@ def clean():
     # [os.remove(os.path.join('simul', f)) for f in os.listdir('simul')]
     [os.remove(os.path.join('static', f))
      for f in os.listdir('static') if f.endswith('.log')]
+
+
+def load_netconvert_template(osm_input, out_name):
+    tree = ElementTree.parse(os.path.join(STATICDIR, 'simul.netcfg'))
+    root = tree.getroot()
+    root.find('input/osm-files').set('value', osm_input)
+    root.find('output/output-file').set('value', f'{out_name}.net.xml')
+    root.find('report/log').set('value', f'{out_name}.netconvert.log')
+    return tree
+
+
+def generate_network(osm_file, out_path, net_name):
+    template = load_netconvert_template(osm_file, net_name)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        netconfig = os.path.join(tmpdirname, f'{net_name}.netcfg')
+        template.write(netconfig)
+        # copy typemaps to tempdir
+        shutil.copytree(os.path.join(STATICDIR, 'typemap'), os.path.join(tmpdirname, 'typemap'))
+        print('Creating the network…')
+        netconvertcmd = ['netconvert', '-c', netconfig]
+        subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print('Copying files')
+        shutil.copy(os.path.join(tmpdirname, f'{net_name}.net.xml'), os.path.join(out_path, f'{net_name}.net.xml'))
+        print('created')
 
 
 def generate_scenario(out_path, name):
@@ -65,5 +91,10 @@ def generate_all(output_path, simulation_name):
 
 
 if __name__ == '__main__':
-    clean()
-    generate_all('/tmp/', 'simul')
+    # clean()
+    # generate_all('/tmp/', 'simul')
+    output_file = '/tmp/simul'
+    if not os.path.exists(output_file):
+        os.mkdir(output_file)
+    osm_file = os.path.join(STATICDIR, 'simul.raw.osm')
+    generate_network(osm_file, output_file, 'test-sc')
