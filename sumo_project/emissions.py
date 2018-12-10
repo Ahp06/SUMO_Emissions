@@ -13,9 +13,6 @@ import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
-config = Config()
-logger = config.init_logger(save_logs = True)
-
 def init_grid(simulation_bounds, areas_number):
     grid = list()
     width = simulation_bounds[1][0] / areas_number
@@ -83,7 +80,7 @@ def get_all_vehicles() -> List[Vehicle]:
         vehicles.append(vehicle)
     return vehicles
 
-def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
+def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, config, logger):
     for area in grid:
         vehicle_emissions = 0
         for vehicle in vehicles:
@@ -97,8 +94,6 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
             if config.limit_speed_mode and not area.limited_speed:
                 logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')
                 actions.limit_speed_into_area(area, vehicles, config.speed_rf)
-                traci.polygon.setColor(area.name, (255, 0, 0))
-                traci.polygon.setFilled(area.name, True)
                 if config.adjust_traffic_light_mode and not area.tls_adjusted:
                     logger.info(f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf*100}%')
                     actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
@@ -107,24 +102,18 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
                 if actions.count_vehicles_in_area(area):
                     logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
+                    
+            traci.polygon.setColor(area.name, (255, 0, 0))
+            traci.polygon.setFilled(area.name, True)
         
         else:
             actions.reverse_actions(area)
 
 
-def main(args):
-    
-    parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-f", "--configfile", type=str, default= 'configs/default_config.json', required=False)
-    args = parser.parse_args(args)
-    
-    config.import_config_file(args.configfile)
-    config.init_traci()
-    
+def run(config, logger):
     grid = list()
     try:
         traci.start(config.sumo_cmd)
-        logger.info(f'Loaded configuration file : {args.configfile}')
         logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
@@ -141,7 +130,7 @@ def main(args):
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
-            get_emissions(grid, vehicles,step)
+            get_emissions(grid, vehicles,step,config,logger)
 
             if config.weight_routing_mode:
                 actions.adjust_edges_weights()
@@ -165,7 +154,20 @@ def main(args):
                 diff_with_actions = (ref - total_emissions)/ref    
                 logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
     
-
+    
+def main(args):
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-f", "--configfile", type=str, default= 'configs/default_config.json', required=False)
+    parser.add_argument("-save", "--save", action = "store_true")
+    args = parser.parse_args(args)
+        
+    config = Config()
+    config.import_config_file(args.configfile)
+    config.init_traci()
+    logger = config.init_logger(save_logs = args.save)
+    
+    logger.info(f'Loaded configuration file : {args.configfile}')
+    run(config, logger)
         
 if __name__ == '__main__':
     main(sys.argv[1:])

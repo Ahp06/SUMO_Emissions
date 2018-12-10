@@ -76,7 +76,7 @@ class Config:
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
     
-    def init_logger(self, save_logs = True):
+    def init_logger(self, save_logs = False):
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
         
@@ -87,11 +87,14 @@ class Config:
         
         logger = logging.getLogger("sumo_logger")
         logger.setLevel(logging.INFO)
-        if save_logs :
-            handler = logging.FileHandler(log_filename)
-        else: 
-            handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        
+        if save_logs :
+            file_handler = logging.FileHandler(log_filename)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+        handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         
