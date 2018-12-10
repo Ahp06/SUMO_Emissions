@@ -8,7 +8,7 @@ import os
 import sys
 import json
 
-class config: 
+class Config: 
     
     # Total of emissions of all pollutants in mg for n steps of simulation without locking areas
     # These constants are simulation dependant, you must change them according to your simulation 
@@ -16,26 +16,28 @@ class config:
     total_emissions200 = 43970763.15084738
     total_emissions300 = 87382632.0821697
     
-    def __init__(self, config_file = None):
-        if not (config_file is None):
-            with open(config_file) as f:
-                data = json.load(f)
+    def __init__(self):
+        '''Default constructor'''
+        
+    def import_config_file(self,config_file):
+        with open(config_file,'r') as f:
+            data = json.load(f)
             
-            self._SUMOCMD = data["_SUMOCMD"]
-            self._SUMOCFG = data["_SUMOCFG"]
-            self.areas_number = data["areas_number"]
-            self.emissions_threshold = data["emissions_threshold"]
-            self.n_steps = data["n_steps"]
-            self.window_size = data["window_size"]
-            self.without_actions_mode = data["without_actions_mode"]
-            self.limit_speed_mode = data["limit_speed_mode"]
-            self.speed_rf = data["speed_rf"]
-            self.adjust_traffic_light_mode = data["adjust_traffic_light_mode"]
-            self.trafficLights_duration_rf = data["trafficLights_duration_rf"]
-            self.weight_routing_mode = data["weight_routing_mode"]
-            self.lock_area_mode = data["lock_area_mode"]
+        self._SUMOCMD = data["_SUMOCMD"]
+        self._SUMOCFG = data["_SUMOCFG"]
+        self.areas_number = data["areas_number"]
+        self.emissions_threshold = data["emissions_threshold"]
+        self.n_steps = data["n_steps"]
+        self.window_size = data["window_size"]
+        self.without_actions_mode = data["without_actions_mode"]
+        self.limit_speed_mode = data["limit_speed_mode"]
+        self.speed_rf = data["speed_rf"]
+        self.adjust_traffic_light_mode = data["adjust_traffic_light_mode"]
+        self.trafficLights_duration_rf = data["trafficLights_duration_rf"]
+        self.weight_routing_mode = data["weight_routing_mode"]
+        self.lock_area_mode = data["lock_area_mode"]
             
-            self.check_config()
+        self.check_config()
                 
     def check_config(self):
         #Weight routing mode cannot be combinated with other actions 
@@ -53,7 +55,7 @@ class config:
         
                 
     def __repr__(self) -> str:
-        return (str(f'Grid : {self.areas_number}x{self.areas_number}\n')
+        return (str(f'grid : {self.areas_number}x{self.areas_number}\n')
         + str(f'step number = {self.n_steps}\n')
         + str(f'window size = {self.window_size}\n')
         + str(f'weight routing mode = {self.weight_routing_mode}\n')
@@ -75,6 +77,10 @@ class config:
     def init_logger(self):
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
+        
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+    
         log_filename = f'logs/sumo_logs_{current_date}.log'
         
         logger = logging.getLogger("sumo_logger")

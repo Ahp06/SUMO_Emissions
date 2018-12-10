@@ -2,18 +2,18 @@ from typing import List
 
 import traci
 import time
+import argparse
 
 from shapely.geometry import LineString
 from parse import search
 
 import actions
-from config import config
+from config import Config
 import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
-config = config('config.json')
-config.init_traci()
+config = Config()
 logger = config.init_logger()
 
 def init_grid(simulation_bounds, areas_number):
@@ -112,7 +112,15 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step):
             actions.reverse_actions(area)
 
 
-def main():
+def main(args):
+    
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-f", "--configfile", type=str, default= 'configs/default_config.json', required=False)
+    args = parser.parse_args(args)
+    
+    config.import_config_file(args.configfile)
+    config.init_traci()
+    
     grid = list()
     try:
         traci.start(config.sumo_cmd)
@@ -161,4 +169,4 @@ def main():
 
         
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
