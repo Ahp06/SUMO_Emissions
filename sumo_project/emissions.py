@@ -14,7 +14,7 @@ from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 from traci import trafficlight
 
 config = Config()
-logger = config.init_logger()
+logger = config.init_logger(save_logs = True)
 
 def init_grid(simulation_bounds, areas_number):
     grid = list()
@@ -124,6 +124,7 @@ def main(args):
     grid = list()
     try:
         traci.start(config.sumo_cmd)
+        logger.info(f'Loaded configuration file : {args.configfile}')
         logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
@@ -163,9 +164,7 @@ def main(args):
             if not (ref is None):
                 diff_with_actions = (ref - total_emissions)/ref    
                 logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
-        
-        logger.info(f'With the configuration : \n{config}')
-        logger.info('Logs END')
+    
 
         
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 {
     "_SUMOCMD": "sumo",
-	"_SUMOCFG": "mulhouse_simulation/osm.sumocfg",
+	"_SUMOCFG": "simulations/mulhouse_simulation/osm.sumocfg",
 	
 	"areas_number": 10,
 	"emissions_threshold": 500000, 

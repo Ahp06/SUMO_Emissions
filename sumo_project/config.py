@@ -25,10 +25,12 @@ class Config:
             
         self._SUMOCMD = data["_SUMOCMD"]
         self._SUMOCFG = data["_SUMOCFG"]
+        
         self.areas_number = data["areas_number"]
         self.emissions_threshold = data["emissions_threshold"]
         self.n_steps = data["n_steps"]
         self.window_size = data["window_size"]
+        
         self.without_actions_mode = data["without_actions_mode"]
         self.limit_speed_mode = data["limit_speed_mode"]
         self.speed_rf = data["speed_rf"]
@@ -74,7 +76,7 @@ class Config:
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
     
-    def init_logger(self):
+    def init_logger(self, save_logs = True):
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
         
@@ -85,7 +87,10 @@ class Config:
         
         logger = logging.getLogger("sumo_logger")
         logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(log_filename)
+        if save_logs :
+            handler = logging.FileHandler(log_filename)
+        else: 
+            handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
