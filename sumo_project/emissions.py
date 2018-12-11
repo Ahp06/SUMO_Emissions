@@ -1,17 +1,17 @@
+import argparse
+import sys
+import time
+from traci import trafficlight
+import traci
 from typing import List
 
-import traci
-import time
-import argparse
-
-from shapely.geometry import LineString
 from parse import search
+from shapely.geometry import LineString
 
 import actions
 from config import Config
-import sys
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
-from traci import trafficlight
+
 
 def init_grid(simulation_bounds, areas_number):
     grid = list()
@@ -159,15 +159,26 @@ def main(args):
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-f", "--configfile", type=str, default= 'configs/default_config.json', required=False)
     parser.add_argument("-save", "--save", action = "store_true")
+    parser.add_argument("-ref","--ref", action = "store_true")
     args = parser.parse_args(args)
-        
+    
+    # > py ./emissions.py -f configs/config1.json -save
+    # will load the configuration file "config1.json" and save logs into the logs directory 
+    
+    # > py ./emissions.py -f configs/config1.json -save & py ./emissions.py -f configs/config1.json -save -ref
+    # same as above but also launches a reference simulation by using -ref option 
+    
     config = Config()
     config.import_config_file(args.configfile)
     config.init_traci()
     logger = config.init_logger(save_logs = args.save)
-    
+    if args.ref: 
+        config.without_actions_mode = True
+        config.check_config()
+        logger.info(f'Reference simulation')
     logger.info(f'Loaded configuration file : {args.configfile}')
+    
     run(config, logger)
-        
+            
 if __name__ == '__main__':
     main(sys.argv[1:])

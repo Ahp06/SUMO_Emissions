@@ -3,14 +3,15 @@ Global configuration for the simulation
 """
 
 import datetime
+import json
 import logging
 import os
 import sys
-import json
+
 
 class Config: 
     
-    # Total of emissions of all pollutants in mg for n steps of simulation without locking areas
+    # Total of emissions of all pollutants in mg for n steps of simulation without acting on areas
     # These constants are simulation dependant, you must change them according to your simulation 
     total_emissions100 = 13615949.148296086
     total_emissions200 = 43970763.15084738
