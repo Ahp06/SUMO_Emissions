@@ -1,0 +1,22 @@
+{
+    "_SUMOCMD": "sumo",
+	"_SUMOCFG": "simulations/mulhouse_simulation/osm.sumocfg",
+	
+	"areas_number": 10,
+	"emissions_threshold": 500000, 
+	"n_steps": 200,
+	"window_size":100,
+	
+	"without_actions_mode": true,
+	
+	"limit_speed_mode": false,
+	"speed_rf": 0.1,
+	
+	"adjust_traffic_light_mode": false,
+	"trafficLights_duration_rf": 0.2,
+	
+	"weight_routing_mode": false,
+	
+	"lock_area_mode": false
+    
+}

@@ -1,9 +1,9 @@
+from traci._trafficlight import Logic as SUMO_Logic
 from typing import Tuple, Set
 
 from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from traci._trafficlight import Logic as SUMO_Logic
 
 
 class Lane:
@@ -51,7 +51,7 @@ class Area:
         self.tls_adjusted = False
         self.rectangle = Polygon(coords)
         self.name = name
-        self.emissions = 0.0
+        self.emissions_by_step = [] 
         self._lanes: Set[Lane] = set()
         self._tls: Set[TrafficLight] = set() 
 
@@ -76,6 +76,19 @@ class Area:
 
     def remove_lane(self, lane: Lane):
         self._lanes.remove(lane)
+        
+    def sum_all_emissions(self):
+        sum = 0 
+        for emission in self.emissions_by_step:
+            sum += emission
+        return sum 
+    
+    def sum_emissions_into_window(self, current_step, window_size):
+        sum = 0
+        q = current_step // window_size #Returns the integral part of the quotient
+        for i in range(q*window_size, current_step):
+            sum += self.emissions_by_step[i]
+        return sum
 
     @classmethod
     def from_bounds(cls, xmin, ymin, xmax, ymax):
