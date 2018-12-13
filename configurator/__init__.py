@@ -1,1 +1,1 @@
-from .configurator import *
+from . import configurator
