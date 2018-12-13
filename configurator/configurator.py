@@ -58,13 +58,9 @@ def generate_scenario(osm_file, out_path, scenario_name):
         subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Move files to destination
-        files = [
-            f'{scenario_name}.net.xml',
-            f'{scenario_name}.netconvert.log',
-            f'{scenario_name}.poly.xml',
-            f'{scenario_name}.polyconvert.log'
-        ]
-        for f in files:
+        for f in os.listdir(tmpdirname):
+            if f.endswith('netcfg') or f.endswith('polycfg') or f == 'typemap':
+                continue
             shutil.move(os.path.join(tmpdirname, f), os.path.join(out_path, f))
 
 
@@ -102,12 +98,18 @@ def generate_all(osm_file, output_path, simulation_name):
     generate_mobility(simulation_dir, simulation_name)
     generate_sumo_configuration(simulation_dir, simulation_name)
     # Move all logs to logdir
+    move_logs(simulation_dir, logs_dir)
+
+
+def move_logs(simulation_dir, logs_dir):
     for f in os.listdir(simulation_dir):
         if os.path.splitext(f)[1] == '.log':
             shutil.move(os.path.join(simulation_dir, f), logs_dir)
 
 
 if __name__ == '__main__':
+    if os.path.isdir('/tmp/scenario/foo'):
+        shutil.rmtree('/tmp/scenario/foo')
     path = '/tmp/scenario/'
     osm = '/tmp/scenario/map.osm'
     generate_all(osm, path, 'foo')
