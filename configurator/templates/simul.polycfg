@@ -5,7 +5,6 @@
     <input>
         <net-file value="simul.net.xml"/>
         <osm-files value="simul.raw.osm"/>
-        <!--<osm.keep-full-type value="true"/>-->
         <type-file value="typemap/osmPolyconvert.typ.xml"/>
     </input>
 
