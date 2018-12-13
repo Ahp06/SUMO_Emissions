@@ -45,6 +45,7 @@ def load_sumoconfig_template(simulation_name):
 def generate_scenario(osm_file, out_path, scenario_name):
     net_template = load_netconvert_template(osm_file, scenario_name)
     poly_template = load_polyconvert_template(osm_file, 'typemap/osmPolyconvert.typ.xml', scenario_name)
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         netconfig = os.path.join(tmpdirname, f'{scenario_name}.netcfg')
         polyconfig = os.path.join(tmpdirname, f'{scenario_name}.polycfg')
@@ -86,12 +87,27 @@ def generate_mobility(path, name):
     randomTrips.main(randomTrips.get_options(options))
 
 
-def generate_all(osm_file, output_path):
-    output_dir = os.path.dirname(output_path)
-    simulation_name = os.path.basename(output_path)
-    generate_scenario(osm_file, output_dir, simulation_name)
-    generate_mobility(output_dir, simulation_name)
+def generate_sumo_configuration(path, scenario_name):
+    sumo_template = load_sumoconfig_template(scenario_name)
+    sumo_template.write(os.path.join(path, f'{scenario_name}.sumocfg'))
+
+
+def generate_all(osm_file, output_path, simulation_name):
+    simulation_dir = os.path.join(output_path, simulation_name)
+    logs_dir = os.path.join(simulation_dir, 'log')
+    if not os.path.exists(simulation_dir):
+        os.mkdir(simulation_dir)
+        os.mkdir(logs_dir)
+    generate_scenario(osm_file, simulation_dir, simulation_name)
+    generate_mobility(simulation_dir, simulation_name)
+    generate_sumo_configuration(simulation_dir, simulation_name)
+    # Move all logs to logdir
+    for f in os.listdir(simulation_dir):
+        if os.path.splitext(f)[1] == '.log':
+            shutil.move(os.path.join(simulation_dir, f), logs_dir)
 
 
 if __name__ == '__main__':
-    pass
+    path = '/tmp/scenario/'
+    osm = '/tmp/scenario/map.osm'
+    generate_all(osm, path, 'foo')

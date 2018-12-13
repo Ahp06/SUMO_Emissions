@@ -8,13 +8,14 @@
     </input>
 
     <output>
-        <output-prefix value="simul." />
-        <output-file value="net.xml"/>
+        <!--<output-prefix value="simul." />-->
+        <output-file value="simul.net.xml"/>
     </output>
 
     <tls_building>
         <tls.join value="true"/>
         <tls.guess-signals value="true"/>
+        <tls.discard-simple value="true" />
         <tls.default-type value="actuated"/>
         <tls.min-dur value="5"/>
         <tls.max-dur value="30"/>
@@ -24,10 +25,15 @@
         <ramps.guess value="true"/>
     </ramp_guessing>
 
+    <junctions>
+         <junctions.join value="true"/>
+    </junctions>
+
     <processing>
         <geometry.remove value="true"/>
         <roundabouts.guess value="true"/>
-        <junctions.join value="true"/>
+
+        <!--
         <junctions.limit-turn-speed value="1"/>
         <crossings.guess value="true"/>
         <walkingareas value="false"/>
@@ -38,7 +44,7 @@
         <no-internal-links value="false"/>
         <ignore-errors value="false"/>
         <ignore-errors.connections value="false"/>
-        <show-errors.connections-first-try value="true"/>
+        <show-errors.connections-first-try value="true"/>-->
     </processing>
 
     <building_defaults>
