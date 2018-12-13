@@ -11,6 +11,19 @@ import randomTrips
 SCRIPTDIR = os.path.dirname(__file__)
 TEMPLATEDIR = os.path.join(SCRIPTDIR, 'templates')
 
+vehicle_classes = {
+    'passenger': {
+        '--vehicle-class': 'passenger',
+        '--vclass': 'passenger',
+        '--prefix': 'veh'
+    },
+    'bus': {
+        '--vehicle-class': 'bus',
+        '--vclass': 'bus',
+        '--prefix': 'bus'
+    }
+}
+
 
 def load_netconvert_template(osm_input, out_name):
     tree = ElementTree.parse(os.path.join(TEMPLATEDIR, 'simul.netcfg'))
@@ -32,11 +45,12 @@ def load_polyconvert_template(osm_file, type_file, scenario_name):
     return tree
 
 
-def load_sumoconfig_template(simulation_name):
+def load_sumoconfig_template(simulation_name, routefiles=None):
+    routefiles = routefiles or (f'{simulation_name}.rou.xml',)
     tree = ElementTree.parse(os.path.join(TEMPLATEDIR, 'simul.sumocfg'))
     root = tree.getroot()
     root.find('input/net-file').set('value', f'{simulation_name}.net.xml')
-    root.find('input/route-files').set('value', f'{simulation_name}.rou.xml')
+    root.find('input/route-files').set('value', ','.join(f for f in routefiles))
     root.find('input/additional-files').set('value', f'{simulation_name}.poly.xml')
     root.find('report/log').set('value', f'{simulation_name}.log')
     return tree
@@ -58,45 +72,48 @@ def generate_scenario(osm_file, out_path, scenario_name):
         subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Move files to destination
-        for f in os.listdir(tmpdirname):
-            if f.endswith('netcfg') or f.endswith('polycfg') or f == 'typemap':
-                continue
-            shutil.move(os.path.join(tmpdirname, f), os.path.join(out_path, f))
+        ignore_patterns = shutil.ignore_patterns('*.polycfg', '*.netcfg', 'typemap')
+        shutil.copytree(tmpdirname, out_path, ignore=ignore_patterns)
 
 
 def generate_mobility(path, name):
-    routefile = os.path.join(path, f'{name}.rou.xml')
     netfile = os.path.join(path, f'{name}.net.xml')
     output = os.path.join(path, f'{name}.trips.xml')
+    routefiles = []
     end_time = 200
-    veh_class = 'passenger'
-    options = [
-        f'--net-file={netfile}',
-        f'--route-file={routefile}',
-        f'--end={end_time}',
-        f'--vehicle-class={veh_class}',
-        f'--output-trip-file={output}',
-        '--validate',
-        '--length',
-    ]
-    print('Generating mobility…')
-    randomTrips.main(randomTrips.get_options(options))
+    classes = ('passenger', 'bus')
+    for veh_class in classes:
+        # simname.bus.rou.xml, simname.passenger.rou.xml, ...
+        routefile = f'{name}.{veh_class}.rou.xml'
+        routepath = os.path.join(path, routefile)
+        routefiles.append(routefile)
+        options = {
+            '--net-file': netfile,
+            '--output-trip-file': output,
+            '--route-file': routepath,
+            '-e': end_time
+        }
+        options.update(vehicle_classes[veh_class])
+        flags = ['-l']
+        generate_random_trips(flags, options)
+    return routefiles
 
 
-def generate_sumo_configuration(path, scenario_name):
-    sumo_template = load_sumoconfig_template(scenario_name)
+def generate_random_trips(flags, options):
+    randomTrips.main(randomTrips.get_options(dict_to_list(options) + flags))
+
+
+def generate_sumo_configuration(routefiles, path, scenario_name):
+    sumo_template = load_sumoconfig_template(routefiles, scenario_name)
     sumo_template.write(os.path.join(path, f'{scenario_name}.sumocfg'))
 
 
-def generate_all(osm_file, output_path, simulation_name):
-    simulation_dir = os.path.join(output_path, simulation_name)
+def generate_all(osm_file, path, simulation_name):
+    simulation_dir = os.path.join(path, simulation_name)
     logs_dir = os.path.join(simulation_dir, 'log')
-    if not os.path.exists(simulation_dir):
-        os.mkdir(simulation_dir)
-        os.mkdir(logs_dir)
     generate_scenario(osm_file, simulation_dir, simulation_name)
-    generate_mobility(simulation_dir, simulation_name)
-    generate_sumo_configuration(simulation_dir, simulation_name)
+    routefiles = generate_mobility(simulation_dir, simulation_name)
+    generate_sumo_configuration(routefiles, simulation_dir, simulation_name)
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
 
@@ -105,6 +122,10 @@ def move_logs(simulation_dir, logs_dir):
     for f in os.listdir(simulation_dir):
         if os.path.splitext(f)[1] == '.log':
             shutil.move(os.path.join(simulation_dir, f), logs_dir)
+
+
+def dict_to_list(d):
+    return [item for k in d for item in (k, d[k])]
 
 
 if __name__ == '__main__':
