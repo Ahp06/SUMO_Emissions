@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import os
 import shutil
 import subprocess
@@ -143,9 +144,19 @@ def dict_to_list(d):
     return [item for k in d for item in (k, d[k])]
 
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('osmfile', type=str)
+    parser.add_argument('--path', type=str, help='Where to generate the files')
+    parser.add_argument('--name', type=str, required=True, help='Name of the scenario to generate')
+    args = parser.parse_args()
+    generate_all(args.osmfile, args.path, args.name)
+
+
 if __name__ == '__main__':
     if os.path.isdir('/tmp/scenario/foo'):
         shutil.rmtree('/tmp/scenario/foo')
     path = '/tmp/scenario/'
     osm = '/tmp/scenario/map.osm'
     generate_all(osm, path, 'foo')
+    # main()
