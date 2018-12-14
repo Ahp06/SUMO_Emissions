@@ -15,12 +15,24 @@ vehicle_classes = {
     'passenger': {
         '--vehicle-class': 'passenger',
         '--vclass': 'passenger',
-        '--prefix': 'veh'
+        '--prefix': 'veh',
+        '--min-distance': 300,
+        '--trip-attributes': 'departLane="best"',
+        # '--validate': True
     },
     'bus': {
         '--vehicle-class': 'bus',
         '--vclass': 'bus',
-        '--prefix': 'bus'
+        '--prefix': 'bus',
+        # '--validate': True
+    },
+    'truck': {
+        '--vehicle-class': 'truck',
+        '--vclass': 'truck',
+        '--prefix': 'truck',
+        '--min-distance': 600,
+        '--trip-attributes': 'departLane="best"',
+        # '--validate': True
     }
 }
 
