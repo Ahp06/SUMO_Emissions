@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 from xml.etree import ElementTree
 
+import sumolib
 import randomTrips
 
 # Absolute path of the directory the script is in
@@ -36,6 +37,44 @@ vehicle_classes = {
         # '--validate': True
     }
 }
+
+
+class RandomTripsGenerator:
+    def __init__(self, netpath, routepath, output, vclass, density, *flags, **opts):
+        self.vclass = vclass
+        self.options = {
+            # Default options
+            '--net-file': netpath,
+            '--output-trip-file': output,
+            '--route-file': routepath,
+            **opts
+        }
+        self.flags = [*flags]
+        edges = sumolib.net.readNet(netpath).getEdges()
+        self._init_trips(edges, vclass, density)
+        self.options.update(vehicle_classes[self.vclass])
+
+    def add_option(self, opt_name, value):
+        self.options[opt_name] = value
+
+    def generate(self):
+        print(f'Generating trips for vehicle class {self.vclass}')
+        randomTrips.main(randomTrips.get_options(dict_to_list(self.options) + self.flags))
+
+    def _init_trips(self, edges, vclass, density):
+        """
+        :param edges: foo.rou.xml
+        :param density: vehicle/km/h
+        """
+        # calculate the total length of the available lanes
+        length = 0.
+        for edge in edges:
+            if edge.allows(vclass):
+                length += edge.getLaneNumber() * edge.getLength()
+
+        period = 3600 / (length / 1000) / density
+        print(f'Period computed for network : {period}, vclass={self.vclass}')
+        self.flags.extend(['-p', period])
 
 
 def load_netconvert_template(osm_input, out_name):
@@ -98,25 +137,14 @@ def generate_mobility(out_path, name):
     routefiles = []
     end_time = 200
     classes = ('passenger', 'bus')
-    for veh_class in classes:
+    for vclass in classes:
         # simname.bus.rou.xml, simname.passenger.rou.xml, ...
-        routefile = f'{name}.{veh_class}.rou.xml'
+        routefile = f'{name}.{vclass}.rou.xml'
         routepath = os.path.join(out_path, routefile)
         routefiles.append(routefile)
-        options = {
-            '--net-file': netpath,
-            '--output-trip-file': output,
-            '--route-file': routepath,
-            '-e': end_time
-        }
-        options.update(vehicle_classes[veh_class])
-        flags = ['-l']
-        generate_random_trips(flags, options)
+        generator = RandomTripsGenerator(netpath, routepath, output, vclass, 10, '-l', **{'--end': end_time})
+        generator.generate()
     return routefiles
-
-
-def generate_random_trips(flags, options):
-    randomTrips.main(randomTrips.get_options(dict_to_list(options) + flags))
 
 
 def generate_sumo_configuration(routefiles, path, scenario_name):
