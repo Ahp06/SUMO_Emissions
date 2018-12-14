@@ -13,17 +13,22 @@ from model import Area, Vehicle
 
 
 def compute_edge_weight(edge_id):
-    return (traci.edge.getCOEmission(edge_id)
-            + traci.edge.getNOxEmission(edge_id)
-            + traci.edge.getHCEmission(edge_id)
-            + traci.edge.getPMxEmission(edge_id)
-            + traci.edge.getCO2Emission(edge_id))/(traci.edge.getLaneNumber(edge_id))
-
-def adjust_edges_weights():     
-    for edge_id in traci.edge.getIDList():
+    
+    co2 = traci.edge.getCO2Emission(edge_id)
+    co = traci.edge.getCOEmission(edge_id)
+    nox = traci.edge.getNOxEmission(edge_id)
+    hc = traci.edge.getHCEmission(edge_id)
+    pmx = traci.edge.getPMxEmission(edge_id)
+    
+    return (co2 + co + nox + hc + pmx)/traci.edge.getLaneNumber(edge_id)
+            
+def adjust_edges_weights(area): 
+    area.weight_adjusted = True    
+    for lane in area._lanes:
+        edge_id = traci.lane.getEdgeID(lane.lane_id)
         weight = compute_edge_weight(edge_id)  # by default edges weight = length/mean speed
         traci.edge.setEffort(edge_id, weight)
-    
+        
     for veh_id in traci.vehicle.getIDList():
         traci.vehicle.rerouteEffort(veh_id)
         
@@ -31,7 +36,7 @@ def limit_speed_into_area(area: Area, vehicles: Iterable[Vehicle], speed_rf):
     area.limited_speed = True
     for lane in area._lanes:
         traci.lane.setMaxSpeed(lane.lane_id, speed_rf * lane.initial_max_speed)
-
+    
 def modifyLogic(logic, rf): #rf for "reduction factor" 
     new_phases = [] 
     for phase in logic._phases:

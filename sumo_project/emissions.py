@@ -13,7 +13,7 @@ from config import Config
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
 
 
-def init_grid(simulation_bounds, areas_number):
+def init_grid(simulation_bounds, areas_number,window_size):
     grid = list()
     width = simulation_bounds[1][0] / areas_number
     height = simulation_bounds[1][1] / areas_number
@@ -22,10 +22,10 @@ def init_grid(simulation_bounds, areas_number):
             # bounds coordinates for the area : (xmin, ymin, xmax, ymax)
             ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
-            area = Area(ar_bounds)
-            area.name = 'Area ({},{})'.format(i, j)
+            name = 'Area ({},{})'.format(i, j)
+            area = Area(ar_bounds, name, window_size)
             grid.append(area)
-            traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
+            traci.polygon.add(area.name, ar_bounds, (255, 0, 0))
     return grid
 
 
@@ -108,11 +108,14 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
                     logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
                     
-            traci.polygon.setColor(area.name, (255, 0, 0))
+            if config.weight_routing_mode and not area.weight_adjusted:
+                actions.adjust_edges_weights(area)
+            
             traci.polygon.setFilled(area.name, True)
         
         else:
             actions.reverse_actions(area)
+            traci.polygon.setFilled(area.name, False)
 
 
 def run(config, logger):
@@ -123,24 +126,22 @@ def run(config, logger):
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
        
-        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number)
+        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number, config.window_size)
         add_data_to_areas(grid)
         
         loading_time = round(time.perf_counter() - start, 2)
         logger.info(f'Data loaded ({loading_time}s)')
         
-        logger.info('Start of the simulation')
+        logger.info('Simulation started...')
         step = 0 
         while step < config.n_steps :  # traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
-
+            
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles, step, config, logger)
-
-            if config.weight_routing_mode:
-                actions.adjust_edges_weights()
-
             step += 1
+            
+            print(f'step = {step}/{config.n_steps}', end='\r')
             
     finally:
         traci.close(False)
@@ -158,33 +159,45 @@ def run(config, logger):
             if not (ref is None):
                 diff_with_actions = (ref - total_emissions) / ref    
                 logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
-    
+
+def add_options(parser):
+    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
+                        help='Choose your configuration file from your working directory')
+    parser.add_argument("-save", "--save", action="store_true", 
+                        help = 'Save the logs into the logs folder')
+    parser.add_argument("-steps", "--steps", type= int, default= 200, required = False, 
+                        help='Choose the simulated time (in seconds)') 
+    parser.add_argument("-ref", "--ref", action="store_true", 
+                        help='Launch a reference simulation (without acting on areas)')
+    parser.add_argument("-gui", "--gui", action ="store_true",
+                        help= "Set GUI mode")
     
 def main(args):
+    
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False)
-    parser.add_argument("-save", "--save", action="store_true")
-    parser.add_argument("-ref", "--ref", action="store_true")
+    add_options(parser)
     args = parser.parse_args(args)
-    
-    # > py ./emissions.py -f configs/config1.json -save
-    # will load the configuration file "config1.json" and save logs into the logs directory 
-    
-    # > py ./emissions.py -f configs/config1.json -save -ref & py ./emissions.py -f configs/config1.json -save
-    # same as above but also launches a reference simulation by using -ref option 
     
     config = Config()
     config.import_config_file(args.configfile)
     config.init_traci()
     logger = config.init_logger(save_logs=args.save)
+    
     if args.ref: 
         config.without_actions_mode = True
-        config.check_config()
         logger.info(f'Reference simulation')
-    logger.info(f'Loaded configuration file : {args.configfile}')
     
+    if args.steps: 
+        config.n_steps = args.steps 
+        
+    if args.gui:
+        config._SUMOCMD = "sumo-gui"
+        
+    config.check_config()
+    
+    logger.info(f'Loaded configuration file : {args.configfile}')
+    logger.info(f'Simulated time : {args.steps}')
     run(config, logger)
 
-            
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -5,6 +5,8 @@ from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
 
+import collections 
+
 
 class Lane:
 
@@ -45,13 +47,15 @@ class TrafficLight:
     
 class Area:
 
-    def __init__(self, coords, name=''):
+    def __init__(self, coords, name, window_size):
         self.limited_speed = False
         self.locked = False
         self.tls_adjusted = False
+        self.weight_adjusted = False
         self.rectangle = Polygon(coords)
         self.name = name
-        self.emissions_by_step = [] 
+        self.emissions_by_step = []
+        self.window = collections.deque(maxlen = window_size)
         self._lanes: Set[Lane] = set()
         self._tls: Set[TrafficLight] = set() 
 
@@ -83,11 +87,12 @@ class Area:
             sum += emission
         return sum 
     
-    def sum_emissions_into_window(self, current_step, window_size):
+    def sum_emissions_into_window(self, current_step, window_size): 
+       
+        self.window.appendleft(self.emissions_by_step[current_step])
         sum = 0
-        q = current_step // window_size #Returns the integral part of the quotient
-        for i in range(q*window_size, current_step):
-            sum += self.emissions_by_step[i]
+        for i in range(self.window.__len__()):
+            sum += self.window[i]
         return sum
 
     @classmethod
