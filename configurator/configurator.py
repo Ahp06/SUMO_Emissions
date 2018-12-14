@@ -107,37 +107,47 @@ def load_polyconvert_template(osm_file, type_file, scenario_name):
     return polyconfig
 
 
-def load_sumoconfig_template(simulation_name, routefiles=()):
+def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=False):
     routefiles = routefiles or (f'{simulation_name}.rou.xml',)
     sumoconfig = ElementTree.parse(os.path.join(TEMPLATEDIR, 'simul.sumocfg'))
     root = sumoconfig.getroot()
     root.find('input/net-file').set('value', f'{simulation_name}.net.xml')
     root.find('input/route-files').set('value', ','.join(routefiles))
-    root.find('input/additional-files').set('value', f'{simulation_name}.poly.xml')
+    if generate_polygons:
+        root.find('input/additional-files').set('value', f'{simulation_name}.poly.xml')
     root.find('report/log').set('value', f'{simulation_name}.log')
     return sumoconfig
 
 
-def generate_scenario(osm_file, out_path, scenario_name):
+def generate_scenario(osm_file, out_path, scenario_name, generate_polygons=False):
     net_template = load_netconvert_template(osm_file, scenario_name)
-    poly_template = load_polyconvert_template(osm_file, 'typemap/osmPolyconvert.typ.xml', scenario_name)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        # Generate POLYCONVERT and NETCONVERT configuration
+        # Generate NETCONVERT configuration
         netconfig = os.path.join(tmpdirname, f'{scenario_name}.netcfg')
-        polyconfig = os.path.join(tmpdirname, f'{scenario_name}.polycfg')
         net_template.write(netconfig)
-        poly_template.write(polyconfig)
         # Copy typemaps to tempdir
         shutil.copytree(os.path.join(TEMPLATEDIR, 'typemap'), os.path.join(tmpdirname, 'typemap'))
-        # Call POLYCONVERT and NETCONVERT
-        polyconvert_cmd = ['polyconvert', '-c', polyconfig]
+        # Call NETCONVERT
+        print("Generate network...")
         netconvertcmd = ['netconvert', '-c', netconfig]
         subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Optionaly generate polygons
+        if generate_polygons:
+            generate_polygons_(osm_file, scenario_name, tmpdirname)
         # Move files to destination
         ignore_patterns = shutil.ignore_patterns('*.polycfg', '*.netcfg', 'typemap')
         shutil.copytree(tmpdirname, out_path, ignore=ignore_patterns)
+
+
+def generate_polygons_(osm_file, scenario_name, dest):
+    polyconfig = os.path.join(dest, f'{scenario_name}.polycfg')
+    poly_template = load_polyconvert_template(osm_file, 'typemap/osmPolyconvert.typ.xml', scenario_name)
+    poly_template.write(polyconfig)
+    # Call POLYCONVERT
+    print('Generate polygons...')
+    polyconvert_cmd = ['polyconvert', '-c', polyconfig]
+    subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def generate_mobility(out_path, name, vclasses):
@@ -156,17 +166,19 @@ def generate_mobility(out_path, name, vclasses):
     return routefiles
 
 
-def generate_sumo_configuration(routefiles, path, scenario_name):
-    sumo_template = load_sumoconfig_template(scenario_name, routefiles=routefiles)
+def generate_sumo_configuration(routefiles, path, scenario_name, generate_polygons=False):
+    sumo_template = load_sumoconfig_template(scenario_name, routefiles=routefiles, generate_polygons=False)
     sumo_template.write(os.path.join(path, f'{scenario_name}.sumocfg'))
 
 
-def generate_all(osm_file, path, simulation_name, vclasses):
-    simulation_dir = os.path.join(path, simulation_name)
+def generate_all(args):
+    simulation_name = args.name
+    simulation_dir = os.path.join(args.path, simulation_name)
+    osm_file = args.osmfile
     logs_dir = os.path.join(simulation_dir, 'log')
-    generate_scenario(osm_file, simulation_dir, simulation_name)
-    routefiles = generate_mobility(simulation_dir, simulation_name, vclasses)
-    generate_sumo_configuration(routefiles, simulation_dir, simulation_name)
+    generate_scenario(osm_file, simulation_dir, simulation_name, args.generate_polygons)
+    routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses)
+    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, args.generate_polygons)
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
 
@@ -185,20 +197,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
     parser.add_argument('--path', help='Where to generate the files')
-    parser.add_argument('--name', required=True, help='Name of the scenario to generate')
+    parser.add_argument('--name', required=True, help='Name of the SUMO scenario to generate')
+    parser.add_argument('--generate-polygons', default=False)
     parser.add_argument('--vclass', dest='vclasses', action=StoreDictKeyPair,
                         nargs="+", metavar="VCLASS=DENSITY",
                         help='Generate this vclass with given density, in pair form vclass=density. The density is '
                              'given in vehicles per hour per kilometer.')
-    args = parser.parse_args()
+    options = parser.parse_args()
     # If no vehicle classes are specified, use 'passenger' as a default
-    vclasses = args.vclasses or ('passenger',)
+    vclasses = options.vclasses or ('passenger',)
     # FIXME Delete simul_dir if it already exists
-    simul_dir = os.path.join(args.path, args.name)
+    simul_dir = os.path.join(options.path, options.name)
     if os.path.isdir(simul_dir):
         input(f'{simul_dir} already exists ! Press Enter to overwrite...')
         shutil.rmtree(simul_dir)
-    generate_all(args.osmfile, args.path, args.name, vclasses)
+    generate_all(options)
 
 
 if __name__ == '__main__':
