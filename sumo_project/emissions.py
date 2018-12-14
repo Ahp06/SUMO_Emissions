@@ -10,7 +10,7 @@ from shapely.geometry import LineString
 
 import actions
 from config import Config
-from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
+from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic, Emission
 
 
 def init_grid(simulation_bounds, areas_number,window_size):
@@ -68,12 +68,14 @@ def add_data_to_areas(areas: List[Area]):
 
 
 def compute_vehicle_emissions(veh_id):
-    return (traci.vehicle.getCOEmission(veh_id)
-            +traci.vehicle.getNOxEmission(veh_id)
-            +traci.vehicle.getHCEmission(veh_id)
-            +traci.vehicle.getPMxEmission(veh_id)
-            +traci.vehicle.getCO2Emission(veh_id))
-
+    
+    co2 = traci.vehicle.getCO2Emission(veh_id)
+    co = traci.vehicle.getCOEmission(veh_id)
+    nox = traci.vehicle.getNOxEmission(veh_id)
+    hc = traci.vehicle.getHCEmission(veh_id)
+    pmx = traci.vehicle.getPMxEmission(veh_id)
+    
+    return Emission(co2,co,nox,hc,pmx)
 
 def get_all_vehicles() -> List[Vehicle]:
     vehicles = list()
@@ -87,12 +89,12 @@ def get_all_vehicles() -> List[Vehicle]:
 
 def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, config, logger):
     for area in grid:
-        vehicle_emissions = 0
+        total_emissions = Emission()
         for vehicle in vehicles:
             if vehicle.pos in area:
-                vehicle_emissions += vehicle.emissions
-                
-        area.emissions_by_step.append(vehicle_emissions)
+                total_emissions += vehicle.emissions
+        
+        area.emissions_by_step.append(total_emissions)
         
         if area.sum_emissions_into_window(current_step, config.window_size) >= config.emissions_threshold: 
                 
@@ -117,7 +119,9 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
             actions.reverse_actions(area)
             traci.polygon.setFilled(area.name, False)
 
-
+def get_reduction_percentage(ref,total):
+    return (ref - total) / ref * 100
+    
 def run(config, logger):
     grid = list()
     try:
@@ -148,17 +152,24 @@ def run(config, logger):
         simulation_time = round(time.perf_counter() - start, 2)
         logger.info(f'End of the simulation ({simulation_time}s)')
         
-        total_emissions = 0
+        total_emissions = Emission()
         for area in grid:
             total_emissions += area.sum_all_emissions()
-    
-        logger.info(f'Total emissions = {total_emissions} mg')
+            
+        logger.info(f'Total emissions = {total_emissions.value()} mg')
         
         if not config.without_actions_mode :
-            ref = config.get_basics_emissions()
+            ref = config.get_ref_emissions()
             if not (ref is None):
-                diff_with_actions = (ref - total_emissions) / ref    
-                logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
+                global_diff = (ref.value() - total_emissions.value()) / ref.value()    
+                
+                logger.info(f'Global reduction percentage of emissions = {global_diff*100} %')
+                logger.info(f'-> CO2 emissions = {get_reduction_percentage(ref.co2, total_emissions.co2)} %')
+                logger.info(f'-> CO emissions = {get_reduction_percentage(ref.co, total_emissions.co)} %')
+                logger.info(f'-> Nox emissions = {get_reduction_percentage(ref.nox, total_emissions.nox)} %')                                
+                logger.info(f'-> HC emissions = {get_reduction_percentage(ref.hc, total_emissions.hc)} %')                                
+                logger.info(f'-> PMx emissions = {get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')                                
+
 
 def add_options(parser):
     parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,

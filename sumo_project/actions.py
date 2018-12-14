@@ -20,7 +20,7 @@ def compute_edge_weight(edge_id):
     hc = traci.edge.getHCEmission(edge_id)
     pmx = traci.edge.getPMxEmission(edge_id)
     
-    return (co2 + co + nox + hc + pmx)/traci.edge.getLaneNumber(edge_id)
+    return (co2 + co + nox + hc + pmx)
             
 def adjust_edges_weights(area): 
     area.weight_adjusted = True    

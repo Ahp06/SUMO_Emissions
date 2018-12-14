@@ -44,7 +44,26 @@ class TrafficLight:
     def __hash__(self):
         """Overrides the default implementation"""
         return hash(self.tl_id)
+
+class Emission:
+    def __init__(self, co2 = 0, co = 0 , nox = 0, hc = 0, pmx = 0):
+        self.co2 = co2
+        self.co = co
+        self.nox = nox
+        self.hc = hc
+        self.pmx = pmx
     
+    def __add__(self,other):
+        return Emission(self.co2 + other.co2, self.co + other.co, self.nox + other.nox, self.hc + other.hc, self.pmx + other.pmx)
+        
+    
+    def value(self):
+        return self.co2 + self.co + self.nox + self.hc + self.pmx
+    
+    def __repr__(self) -> str:
+        repr = f'Emission(co2={self.co2},co={self.co},nox={self.nox},hc={self.hc},pmx={self.pmx})'
+        return str(repr)
+
 class Area:
 
     def __init__(self, coords, name, window_size):
@@ -82,14 +101,16 @@ class Area:
         self._lanes.remove(lane)
         
     def sum_all_emissions(self):
-        sum = 0 
+        sum = Emission()
         for emission in self.emissions_by_step:
             sum += emission
         return sum 
     
     def sum_emissions_into_window(self, current_step, window_size): 
-       
-        self.window.appendleft(self.emissions_by_step[current_step])
+        #print(self.emissions_by_step)
+        em_obj = self.emissions_by_step[current_step]
+        self.window.appendleft(em_obj.value())
+        
         sum = 0
         for i in range(self.window.__len__()):
             sum += self.window[i]
@@ -106,7 +127,7 @@ class Area:
 class Vehicle:
 
     def __init__(self, veh_id: int, pos: Tuple[float, float]):
-        self.emissions: float = 0.0
+        self.emissions: Emission = Emission()
         self.veh_id = veh_id
         self.pos = Point(pos)
 

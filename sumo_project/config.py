@@ -8,14 +8,13 @@ import logging
 import os
 import sys
 
+from model import Emission
 
 class Config: 
     
     # Total of emissions of all pollutants in mg for n steps of simulation without acting on areas
     # These constants are simulation dependant, you must change them according to your simulation 
-    total_emissions100 = 13615949.148296086
-    total_emissions200 = 43970763.15084738
-    total_emissions300 = 87382632.0821697
+    ref200 = Emission(co2=42816869.05436445,co=1128465.0343051048,nox=18389.648337283958,hc=6154.330914019103,pmx=885.0829265236318)
     
     def __init__(self):
         '''Default constructor'''
@@ -101,12 +100,8 @@ class Config:
         
         return logger
 
-    def get_basics_emissions(self):
-        if self.n_steps == 100:
-            return self.total_emissions100
+    def get_ref_emissions(self):
         if self.n_steps == 200:
-            return self.total_emissions200
-        if self.n_steps == 300:
-            return self.total_emissions300
+            return self.ref200
     
     
