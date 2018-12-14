@@ -3,7 +3,7 @@ import shutil
 import tempfile
 import unittest
 
-from configurator import configurator
+import configurator
 
 # Absolute path of the directory the script is in
 SCRIPTDIR = os.path.dirname(__file__)
