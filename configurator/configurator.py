@@ -6,8 +6,8 @@ import subprocess
 import tempfile
 from xml.etree import ElementTree
 
-import sumolib
 import randomTrips
+import sumolib
 
 # Absolute path of the directory the script is in
 SCRIPTDIR = os.path.dirname(__file__)
@@ -72,9 +72,19 @@ class RandomTripsGenerator:
             if edge.allows(vclass):
                 length += edge.getLaneNumber() * edge.getLength()
 
+        print(f'density = {density}')
         period = 3600 / (length / 1000) / density
         print(f'Period computed for network : {period}, vclass={self.vclass}')
         self.flags.extend(['-p', period])
+
+
+class StoreDictKeyPair(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        pairs = {}
+        for kv in values:
+            k, v = kv.split("=")
+            pairs[k] = v
+        setattr(namespace, self.dest, pairs)
 
 
 def load_netconvert_template(osm_input, out_name):
@@ -130,19 +140,18 @@ def generate_scenario(osm_file, out_path, scenario_name):
         shutil.copytree(tmpdirname, out_path, ignore=ignore_patterns)
 
 
-def generate_mobility(out_path, name):
+def generate_mobility(out_path, name, vclasses):
     netfile = f'{name}.net.xml'
     netpath = os.path.join(out_path, netfile)
     output = os.path.join(out_path, f'{name}.trips.xml')
     routefiles = []
     end_time = 200
-    classes = ('passenger', 'bus')
-    for vclass in classes:
+    for vclass in vclasses:
         # simname.bus.rou.xml, simname.passenger.rou.xml, ...
         routefile = f'{name}.{vclass}.rou.xml'
         routepath = os.path.join(out_path, routefile)
         routefiles.append(routefile)
-        generator = RandomTripsGenerator(netpath, routepath, output, vclass, 10, '-l', **{'--end': end_time})
+        generator = RandomTripsGenerator(netpath, routepath, output, vclass, 10.0, '-l', **{'--end': end_time})
         generator.generate()
     return routefiles
 
@@ -152,11 +161,11 @@ def generate_sumo_configuration(routefiles, path, scenario_name):
     sumo_template.write(os.path.join(path, f'{scenario_name}.sumocfg'))
 
 
-def generate_all(osm_file, path, simulation_name):
+def generate_all(osm_file, path, simulation_name, vclasses):
     simulation_dir = os.path.join(path, simulation_name)
     logs_dir = os.path.join(simulation_dir, 'log')
     generate_scenario(osm_file, simulation_dir, simulation_name)
-    routefiles = generate_mobility(simulation_dir, simulation_name)
+    routefiles = generate_mobility(simulation_dir, simulation_name, vclasses)
     generate_sumo_configuration(routefiles, simulation_dir, simulation_name)
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
@@ -174,17 +183,23 @@ def dict_to_list(d):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('osmfile', type=str)
-    parser.add_argument('--path', type=str, help='Where to generate the files')
-    parser.add_argument('--name', type=str, required=True, help='Name of the scenario to generate')
+    parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
+    parser.add_argument('--path', help='Where to generate the files')
+    parser.add_argument('--name', required=True, help='Name of the scenario to generate')
+    parser.add_argument('--vclass', dest='vclasses', action=StoreDictKeyPair,
+                        nargs="+", metavar="VCLASS=DENSITY",
+                        help='Generate this vclass with given density, in pair form vclass=density. The density is '
+                             'given in vehicles per hour per kilometer.')
     args = parser.parse_args()
-    generate_all(args.osmfile, args.path, args.name)
+    # If no vehicle classes are specified, use 'passenger' as a default
+    vclasses = args.vclasses or ('passenger',)
+    # FIXME Delete simul_dir if it already exists
+    simul_dir = os.path.join(args.path, args.name)
+    if os.path.isdir(simul_dir):
+        input(f'{simul_dir} already exists ! Press Enter to overwrite...')
+        shutil.rmtree(simul_dir)
+    generate_all(args.osmfile, args.path, args.name, vclasses)
 
 
 if __name__ == '__main__':
-    if os.path.isdir('/tmp/scenario/foo'):
-        shutil.rmtree('/tmp/scenario/foo')
-    path = '/tmp/scenario/'
-    osm = '/tmp/scenario/map.osm'
-    generate_all(osm, path, 'foo')
-    # main()
+    main()
