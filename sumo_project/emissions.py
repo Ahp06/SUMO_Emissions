@@ -1,5 +1,6 @@
 import argparse
 import csv
+import itertools
 import sys
 import time
 from traci import trafficlight
@@ -14,6 +15,9 @@ from shapely.geometry import LineString
 import actions
 from config import Config
 from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic, Emission
+
+# Absolute path of the directory the script is in
+SCRIPTDIR = os.path.dirname(__file__)
 
 
 def init_grid(simulation_bounds, areas_number,window_size):
@@ -125,31 +129,24 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 def get_reduction_percentage(ref,total):
     return (ref - total) / ref * 100
 
+
 def export_data_to_csv(config, grid):
-    
-    now = datetime.datetime.now()
-    current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
-    
-    '''if not os.path.exists(f'csv/{current_date}'):
-        os.makedirs(f'csv/{current_date}')'''
-    
-    with open(f'test.csv', mode='w', newline = '') as emission_file:
-        try:
-            csv_writer = csv.writer(emission_file, delimiter = ' ', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(['steps'])
-            a = list(range(config.n_steps)) 
-            for item in a:
-                csv_writer.writerow([item])
-                
-            for area in grid:
-                csv_writer.writerow([f'{area.name}'])
-                for emission in area.emissions_by_step:
-                    csv_writer.writerow([emission.value()])
-            
-        finally:
-            emission_file.close()
-        
-    
+    csv_dir = os.path.join(SCRIPTDIR, 'csv')
+    if not os.path.exists(csv_dir):
+        os.mkdir(csv_dir)
+    now = datetime.datetime.utcnow().isoformat()
+
+    with open(os.path.join(csv_dir, f'{now}.csv'), 'w') as f:
+        writer = csv.writer(f)
+        # Write CSV headers
+        writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))
+        emissions = (a.emissions_by_step for a in grid)
+        step = 0
+        for em in emissions:
+            writer.writerow(itertools.chain((step,), (e.value() for e in em)))
+            step += 1
+
+
 def run(config, logger):
     grid = list()
     try:
