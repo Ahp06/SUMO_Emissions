@@ -65,7 +65,7 @@ class Config:
             f'lock area mode = {self.lock_area_mode}\n'
             f'limit speed mode = {self.limit_speed_mode}, RF = {self.speed_rf * 100}%\n'
             f'adjust traffic light mode = {self.adjust_traffic_light_mode},'
-            'RF = {self.trafficLights_duration_rf * 100}%\n'
+            f'RF = {self.trafficLights_duration_rf * 100}%\n'
         )
 
     def init_traci(self):
