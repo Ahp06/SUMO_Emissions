@@ -10,6 +10,7 @@ import sys
 
 from model import Emission
 
+
 class Config: 
     
     # Total of emissions of all pollutants in mg for n steps of simulation without acting on areas

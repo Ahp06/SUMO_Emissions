@@ -1,11 +1,10 @@
+import collections 
 from traci._trafficlight import Logic as SUMO_Logic
 from typing import Tuple, Set
 
 from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-
-import collections 
 
 
 class Lane:
@@ -107,9 +106,8 @@ class Area:
         return sum 
     
     def sum_emissions_into_window(self, current_step, window_size): 
-        #print(self.emissions_by_step)
-        em_obj = self.emissions_by_step[current_step]
-        self.window.appendleft(em_obj.value())
+
+        self.window.appendleft(self.emissions_by_step[current_step].value())
         
         sum = 0
         for i in range(self.window.__len__()):

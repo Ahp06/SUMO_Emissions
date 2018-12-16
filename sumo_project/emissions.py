@@ -1,9 +1,12 @@
 import argparse
+import csv
 import sys
 import time
 from traci import trafficlight
 import traci
 from typing import List
+import datetime
+import os
 
 from parse import search
 from shapely.geometry import LineString
@@ -121,6 +124,33 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 
 def get_reduction_percentage(ref,total):
     return (ref - total) / ref * 100
+
+def export_data_to_csv(config, grid):
+    
+    now = datetime.datetime.now()
+    current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
+    
+    '''if not os.path.exists(f'csv/{current_date}'):
+        os.makedirs(f'csv/{current_date}')'''
+    
+    '''with open(f'test.csv', mode='w', newline = '') as emission_file:
+        try:
+            csv_writer = csv.writer(emission_file, delimiter = '', quoting=csv.QUOTE_MINIMAL)
+            a = list(range(config.n_steps)) 
+            csv_writer.writerow(['steps'])
+            for item in a:
+                csv_writer.writerow([item])
+                
+            for area in grid:
+                writer = csv.writer(emission_file, delimiter = ' ', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([f'{area.name}'])
+                for emission in area.emissions_by_step:
+                    writer.writerow([emission.value()])
+                
+            
+        finally:
+            emission_file.close()'''
+        
     
 def run(config, logger):
     grid = list()
@@ -131,6 +161,7 @@ def run(config, logger):
         start = time.perf_counter()
        
         grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number, config.window_size)
+        export_data_to_csv(config,grid)
         add_data_to_areas(grid)
         
         loading_time = round(time.perf_counter() - start, 2)
@@ -149,8 +180,10 @@ def run(config, logger):
             
     finally:
         traci.close(False)
+                
         simulation_time = round(time.perf_counter() - start, 2)
         logger.info(f'End of the simulation ({simulation_time}s)')
+        logger.info(f'Real-time factor : {config.n_steps/simulation_time}')
         
         total_emissions = Emission()
         for area in grid:
@@ -207,7 +240,7 @@ def main(args):
     config.check_config()
     
     logger.info(f'Loaded configuration file : {args.configfile}')
-    logger.info(f'Simulated time : {args.steps}')
+    logger.info(f'Simulated time : {args.steps}s')
     run(config, logger)
 
 if __name__ == '__main__':
