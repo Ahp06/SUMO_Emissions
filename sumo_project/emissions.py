@@ -46,9 +46,9 @@ def get_all_lanes() -> List[Lane]:
 
 def parse_phase(phase_repr):
     duration = search('duration: {:f}', phase_repr)
-    min_duration = search('min_duration: {:f}', phase_repr)
-    max_duration = search('max_duration: {:f}', phase_repr)
-    phase_def = search('phase_def: {}\n', phase_repr)
+    min_duration = search('minDuration: {:f}', phase_repr)
+    max_duration = search('maxDuration: {:f}', phase_repr)
+    phase_def = search('phaseDef: {}\n', phase_repr)
 
     if phase_def is None:
         phase_def = ''
