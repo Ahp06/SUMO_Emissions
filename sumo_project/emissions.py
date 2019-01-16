@@ -15,10 +15,6 @@ import actions
 from config import Config
 from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 
-# Absolute path of the directory the script is in
-SCRIPTDIR = os.path.dirname(__file__)
-
-
 def init_grid(simulation_bounds, areas_number, window_size):
     grid = list()
     width = simulation_bounds[1][0] / areas_number
@@ -137,17 +133,17 @@ def export_data_to_csv(config, grid):
     csv_dir = os.path.join(SCRIPTDIR, 'csv')
     if not os.path.exists(csv_dir):
         os.mkdir(csv_dir)
-    now = datetime.datetime.utcnow().isoformat()
-
-    with open(os.path.join(csv_dir, f'{now}.csv'), 'w') as f:
+        
+    now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        
+    with open(f'csv/{now}.csv', 'w') as f:
         writer = csv.writer(f)
         # Write CSV headers
         writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))
-        emissions = (a.emissions_by_step for a in grid)
-        step = 0
-        for em in emissions:
-            writer.writerow(itertools.chain((step,), (e.value() for e in em)))
-            step += 1
+        # Write all areas emission value for each step
+        for step in range(config.n_steps):
+            em_for_step = (f'{a.emissions_by_step[step].value():.3f}' for a in grid)
+            writer.writerow(itertools.chain((step,), em_for_step))
 
 
 def run(config, logger):
