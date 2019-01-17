@@ -1,4 +1,4 @@
-# Welcome to the SUMO_Emissions wiki!
+# SUMO Emissions
 
 This "Proof of concept" aims to simulate the impact that connected vehicles and smart urban infrastructure would have on pollutant emissions.
 Using the SUMO simulator, we developed several parameters and measures using Traci to act on the road infrastructure and vehicles.
