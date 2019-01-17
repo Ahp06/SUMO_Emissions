@@ -1,19 +1,21 @@
 import argparse
+import csv
+import datetime
+import itertools
+import os
 import sys
 import time
-from traci import trafficlight
-import traci
 from typing import List
 
+import traci
 from parse import search
 from shapely.geometry import LineString
 
 import actions
 from config import Config
-from model import Area, Vehicle, Lane , TrafficLight , Phase , Logic
+from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 
-
-def init_grid(simulation_bounds, areas_number):
+def init_grid(simulation_bounds, areas_number, window_size):
     grid = list()
     width = simulation_bounds[1][0] / areas_number
     height = simulation_bounds[1][1] / areas_number
@@ -22,10 +24,10 @@ def init_grid(simulation_bounds, areas_number):
             # bounds coordinates for the area : (xmin, ymin, xmax, ymax)
             ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                          ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
-            area = Area(ar_bounds)
-            area.name = 'Area ({},{})'.format(i, j)
+            name = 'Area ({},{})'.format(i, j)
+            area = Area(ar_bounds, name, window_size)
             grid.append(area)
-            traci.polygon.add(area.name, ar_bounds, (0, 255, 0))
+            traci.polygon.add(area.name, ar_bounds, (255, 0, 0))
     return grid
 
 
@@ -40,14 +42,16 @@ def get_all_lanes() -> List[Lane]:
 
 def parse_phase(phase_repr):
     duration = search('duration: {:f}', phase_repr)
-    minDuration = search('minDuration: {:f}', phase_repr)
-    maxDuration = search('maxDuration: {:f}', phase_repr)
-    phaseDef = search('phaseDef: {}\n', phase_repr)
+    min_duration = search('minDuration: {:f}', phase_repr)
+    max_duration = search('maxDuration: {:f}', phase_repr)
+    phase_def = search('phaseDef: {}\n', phase_repr)
 
-    if phaseDef is None: phaseDef = ''
-    else : phaseDef = phaseDef[0]
+    if phase_def is None:
+        phase_def = ''
+    else:
+        phase_def = phase_def[0]
 
-    return Phase(duration[0], minDuration[0], maxDuration[0], phaseDef)
+    return Phase(duration[0], min_duration[0], max_duration[0], phase_def)
 
 
 def add_data_to_areas(areas: List[Area]):
@@ -63,16 +67,18 @@ def add_data_to_areas(areas: List[Area]):
                             phases = []
                             for phase in traci.trafficlight.Logic.getPhases(l):  # add phases to logics
                                 phases.append(parse_phase(phase.__repr__()))
-                            logics.append(Logic(l, phases)) 
+                            logics.append(Logic(l, phases))
                         area.add_tl(TrafficLight(tl_id, logics))
 
 
 def compute_vehicle_emissions(veh_id):
-    return (traci.vehicle.getCOEmission(veh_id)
-            +traci.vehicle.getNOxEmission(veh_id)
-            +traci.vehicle.getHCEmission(veh_id)
-            +traci.vehicle.getPMxEmission(veh_id)
-            +traci.vehicle.getCO2Emission(veh_id))
+    co2 = traci.vehicle.getCO2Emission(veh_id)
+    co = traci.vehicle.getCOEmission(veh_id)
+    nox = traci.vehicle.getNOxEmission(veh_id)
+    hc = traci.vehicle.getHCEmission(veh_id)
+    pmx = traci.vehicle.getPMxEmission(veh_id)
+
+    return Emission(co2, co, nox, hc, pmx)
 
 
 def get_all_vehicles() -> List[Vehicle]:
@@ -87,32 +93,57 @@ def get_all_vehicles() -> List[Vehicle]:
 
 def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, config, logger):
     for area in grid:
-        vehicle_emissions = 0
+        total_emissions = Emission()
         for vehicle in vehicles:
             if vehicle.pos in area:
-                vehicle_emissions += vehicle.emissions
-                
-        area.emissions_by_step.append(vehicle_emissions)
-        
-        if area.sum_emissions_into_window(current_step, config.window_size) >= config.emissions_threshold: 
-                
+                total_emissions += vehicle.emissions
+
+        area.emissions_by_step.append(total_emissions)
+
+        if area.sum_emissions_into_window(current_step, config.window_size) >= config.emissions_threshold:
+
             if config.limit_speed_mode and not area.limited_speed:
-                logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf*100}%')
+                logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf * 100}%')
                 actions.limit_speed_into_area(area, vehicles, config.speed_rf)
                 if config.adjust_traffic_light_mode and not area.tls_adjusted:
-                    logger.info(f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf*100}%')
+                    logger.info(
+                        f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf * 100}%')
                     actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
-                
+
             if config.lock_area_mode and not area.locked:
                 if actions.count_vehicles_in_area(area):
                     logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
-                    
-            traci.polygon.setColor(area.name, (255, 0, 0))
+
+            if config.weight_routing_mode and not area.weight_adjusted:
+                actions.adjust_edges_weights(area)
+
             traci.polygon.setFilled(area.name, True)
-        
+
         else:
             actions.reverse_actions(area)
+            traci.polygon.setFilled(area.name, False)
+
+
+def get_reduction_percentage(ref, total):
+    return (ref - total) / ref * 100
+
+
+def export_data_to_csv(config, grid):
+    csv_dir = os.path.join(SCRIPTDIR, 'csv')
+    if not os.path.exists(csv_dir):
+        os.mkdir(csv_dir)
+        
+    now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        
+    with open(f'csv/{now}.csv', 'w') as f:
+        writer = csv.writer(f)
+        # Write CSV headers
+        writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))
+        # Write all areas emission value for each step
+        for step in range(config.n_steps):
+            em_for_step = (f'{a.emissions_by_step[step].value():.3f}' for a in grid)
+            writer.writerow(itertools.chain((step,), em_for_step))
 
 
 def run(config, logger):
@@ -122,69 +153,90 @@ def run(config, logger):
         logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
-       
-        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number)
+
+        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number, config.window_size)
         add_data_to_areas(grid)
-        
+
         loading_time = round(time.perf_counter() - start, 2)
         logger.info(f'Data loaded ({loading_time}s)')
-        
-        logger.info('Start of the simulation')
-        step = 0 
-        while step < config.n_steps :  # traci.simulation.getMinExpectedNumber() > 0:
+
+        logger.info('Simulation started...')
+        step = 0
+        while step < config.n_steps:  # traci.simulation.getMinExpectedNumber() > 0:
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
             get_emissions(grid, vehicles, step, config, logger)
-
-            if config.weight_routing_mode:
-                actions.adjust_edges_weights()
-
             step += 1
-            
+
+            print(f'step = {step}/{config.n_steps}', end='\r')
+
     finally:
         traci.close(False)
+        export_data_to_csv(config, grid)
+
         simulation_time = round(time.perf_counter() - start, 2)
         logger.info(f'End of the simulation ({simulation_time}s)')
-        
-        total_emissions = 0
+        logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
+
+        total_emissions = Emission()
         for area in grid:
             total_emissions += area.sum_all_emissions()
-    
-        logger.info(f'Total emissions = {total_emissions} mg')
-        
-        if not config.without_actions_mode :
-            ref = config.get_basics_emissions()
+
+        logger.info(f'Total emissions = {total_emissions.value()} mg')
+
+        if not config.without_actions_mode:
+            ref = config.get_ref_emissions()
             if not (ref is None):
-                diff_with_actions = (ref - total_emissions) / ref    
-                logger.info(f'Reduction percentage of emissions = {diff_with_actions*100} %')
-    
-    
+                global_diff = (ref.value() - total_emissions.value()) / ref.value()
+
+                logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
+                logger.info(f'-> CO2 emissions = {get_reduction_percentage(ref.co2, total_emissions.co2)} %')
+                logger.info(f'-> CO emissions = {get_reduction_percentage(ref.co, total_emissions.co)} %')
+                logger.info(f'-> Nox emissions = {get_reduction_percentage(ref.nox, total_emissions.nox)} %')
+                logger.info(f'-> HC emissions = {get_reduction_percentage(ref.hc, total_emissions.hc)} %')
+                logger.info(f'-> PMx emissions = {get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')
+
+
+def add_options(parser):
+    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
+                        help='Choose your configuration file from your working directory')
+    parser.add_argument("-save", "--save", action="store_true",
+                        help='Save the logs into the logs folder')
+    parser.add_argument("-steps", "--steps", type=int, default=200, required=False,
+                        help='Choose the simulated time (in seconds)')
+    parser.add_argument("-ref", "--ref", action="store_true",
+                        help='Launch a reference simulation (without acting on areas)')
+    parser.add_argument("-gui", "--gui", action="store_true",
+                        help="Set GUI mode")
+
+
 def main(args):
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False)
-    parser.add_argument("-save", "--save", action="store_true")
-    parser.add_argument("-ref", "--ref", action="store_true")
+    add_options(parser)
     args = parser.parse_args(args)
-    
-    # > py ./emissions.py -f configs/config1.json -save
-    # will load the configuration file "config1.json" and save logs into the logs directory 
-    
-    # > py ./emissions.py -f configs/config1.json -save -ref & py ./emissions.py -f configs/config1.json -save
-    # same as above but also launches a reference simulation by using -ref option 
-    
+
     config = Config()
     config.import_config_file(args.configfile)
     config.init_traci()
     logger = config.init_logger(save_logs=args.save)
-    if args.ref: 
+
+    if args.ref:
         config.without_actions_mode = True
-        config.check_config()
         logger.info(f'Reference simulation')
+
+    if args.steps:
+        config.n_steps = args.steps
+
+    if args.gui:
+        config._SUMOCMD = "sumo-gui"
+
+    config.check_config()
+
     logger.info(f'Loaded configuration file : {args.configfile}')
-    
+    logger.info(f'Simulated time : {args.steps}s')
     run(config, logger)
 
-            
+
 if __name__ == '__main__':
     main(sys.argv[1:])
