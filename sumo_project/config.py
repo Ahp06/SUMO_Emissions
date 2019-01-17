@@ -1,5 +1,7 @@
 """
-Global configuration for the simulation
+Created on 17 oct. 2018
+
+@author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
 import datetime
@@ -10,17 +12,32 @@ import sys
 
 from model import Emission
 
+"""
+This module defines the global configuration for the simulation
+"""
+
 
 class Config:
+    """
+    The Config class defines all simulation properties that can be changed
+    """
+
     # Total of emissions of all pollutants in mg for n steps of simulation without acting on areas
     # These constants are simulation dependant, you must change them according to your simulation 
     ref200 = Emission(co2=42816869.05436445, co=1128465.0343051048, nox=18389.648337283958, hc=6154.330914019103,
                       pmx=885.0829265236318)
 
     def __init__(self):
-        """Default constructor"""
+        """
+        Default constructor
+        """
 
     def import_config_file(self, config_file):
+        """
+        Import your configuration file in JSON format
+        :param config_file: The path to your configuration file
+        :return:
+        """
         with open(config_file, 'r') as f:
             data = json.load(f)
 
@@ -43,6 +60,10 @@ class Config:
         self.check_config()
 
     def check_config(self):
+        """
+        Check the relevance of user configuration choices
+        :return:
+        """
         # Weight routing mode cannot be combinated with other actions
         if self.weight_routing_mode:
             self.limit_speed_mode = False
@@ -57,6 +78,9 @@ class Config:
             self.lock_area_mode = False
 
     def __repr__(self) -> str:
+        """
+        :return: All properties chosen by the user
+        """
         return (
             f'grid : {self.areas_number}x{self.areas_number}\n'
             f'step number = {self.n_steps}\n'
@@ -69,6 +93,10 @@ class Config:
         )
 
     def init_traci(self):
+        """
+        Init the Traci API
+        :return:
+        """
         if 'SUMO_HOME' in os.environ:
             tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
             sys.path.append(tools)
@@ -79,6 +107,11 @@ class Config:
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
 
     def init_logger(self, save_logs=False):
+        """
+        Init the application logger
+        :param save_logs: If save_logs is True, it will save the logs into the logs directory
+        :return:
+        """
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
 
@@ -103,5 +136,8 @@ class Config:
         return logger
 
     def get_ref_emissions(self):
+        """
+        :return: Return the sum of all emissions (in mg) from the simulation of reference
+        """
         if self.n_steps == 200:
             return self.ref200

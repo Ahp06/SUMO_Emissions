@@ -1,3 +1,9 @@
+"""
+Created on 17 oct. 2018
+
+@author: Axel Huynh-Phuc, Thibaud Gasser
+"""
+
 import argparse
 import csv
 import datetime
@@ -7,15 +13,25 @@ import sys
 import time
 from typing import List
 
+import actions
 import traci
+from config import Config
+from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 from parse import search
 from shapely.geometry import LineString
 
-import actions
-from config import Config
-from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+"""
+This module defines the entry point of the application 
+"""
 
 def init_grid(simulation_bounds, areas_number, window_size):
+    """
+    Initialize the grid of the loaded map from the configuration
+    :param simulation_bounds: The map bounds
+    :param areas_number: The number of areas
+    :param window_size: The size of the acquisition window
+    :return: A list of areas
+    """
     grid = list()
     width = simulation_bounds[1][0] / areas_number
     height = simulation_bounds[1][1] / areas_number
@@ -32,6 +48,10 @@ def init_grid(simulation_bounds, areas_number, window_size):
 
 
 def get_all_lanes() -> List[Lane]:
+    """
+    Recover and creates a list of Lane objects
+    :return: The lanes list
+    """
     lanes = []
     for lane_id in traci.lane.getIDList():
         polygon_lane = LineString(traci.lane.getShape(lane_id))
@@ -41,6 +61,12 @@ def get_all_lanes() -> List[Lane]:
 
 
 def parse_phase(phase_repr):
+    """
+    Because the SUMO object Phase does not contain accessors,
+    we parse the string representation to retrieve data members.
+    :param phase_repr: The Phase string representation
+    :return: An new Phase instance
+    """
     duration = search('duration: {:f}', phase_repr)
     min_duration = search('minDuration: {:f}', phase_repr)
     max_duration = search('maxDuration: {:f}', phase_repr)
@@ -55,6 +81,11 @@ def parse_phase(phase_repr):
 
 
 def add_data_to_areas(areas: List[Area]):
+    """
+    Adds all recovered data to different areas
+    :param areas: The list of areas
+    :return:
+    """
     lanes = get_all_lanes()
     for area in areas:
         for lane in lanes:  # add lanes 
@@ -72,6 +103,11 @@ def add_data_to_areas(areas: List[Area]):
 
 
 def compute_vehicle_emissions(veh_id):
+    """
+    Recover the emissions of different pollutants from a vehicle and create an Emission instance
+    :param veh_id:
+    :return: A new Emission instance
+    """
     co2 = traci.vehicle.getCO2Emission(veh_id)
     co = traci.vehicle.getCOEmission(veh_id)
     nox = traci.vehicle.getNOxEmission(veh_id)
@@ -82,6 +118,10 @@ def compute_vehicle_emissions(veh_id):
 
 
 def get_all_vehicles() -> List[Vehicle]:
+    """
+    Recover all useful information about vehicles and creates a vehicles list
+    :return: A list of vehicles instances
+    """
     vehicles = list()
     for veh_id in traci.vehicle.getIDList():
         veh_pos = traci.vehicle.getPosition(veh_id)
@@ -92,6 +132,16 @@ def get_all_vehicles() -> List[Vehicle]:
 
 
 def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, config, logger):
+    """
+    For each area retrieves the acquired emissions in the window,
+    and acts according to the configuration chosen by the user
+    :param grid: The list of areas
+    :param vehicles: The list of vehicles
+    :param current_step: The simulation current step
+    :param config: The simulation configuration
+    :param logger: The simulation logger
+    :return:
+    """
     for area in grid:
         total_emissions = Emission()
         for vehicle in vehicles:
@@ -100,11 +150,11 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 
         area.emissions_by_step.append(total_emissions)
 
-        if area.sum_emissions_into_window(current_step, config.window_size) >= config.emissions_threshold:
+        if area.sum_emissions_into_window(current_step) >= config.emissions_threshold:
 
             if config.limit_speed_mode and not area.limited_speed:
                 logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf * 100}%')
-                actions.limit_speed_into_area(area, vehicles, config.speed_rf)
+                actions.limit_speed_into_area(area, config.speed_rf)
                 if config.adjust_traffic_light_mode and not area.tls_adjusted:
                     logger.info(
                         f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf * 100}%')
@@ -126,16 +176,28 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 
 
 def get_reduction_percentage(ref, total):
+    """
+    Return the reduction percentage of total emissions between reference and an other simulation
+    :param ref:
+    :param total:
+    :return:
+    """
     return (ref - total) / ref * 100
 
 
 def export_data_to_csv(config, grid):
-    csv_dir = os.path.join(SCRIPTDIR, 'csv')
+    """
+    Export all Emission objects as a CSV file into the csv directory
+    :param config: The simulation configuration
+    :param grid: The list of areas
+    :return:
+    """
+    csv_dir = 'csv'
     if not os.path.exists(csv_dir):
         os.mkdir(csv_dir)
-        
+
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        
+
     with open(f'csv/{now}.csv', 'w') as f:
         writer = csv.writer(f)
         # Write CSV headers
@@ -147,6 +209,12 @@ def export_data_to_csv(config, grid):
 
 
 def run(config, logger):
+    """
+    Run the simulation with the configuration chosen
+    :param config: The simulation configuration
+    :param logger: The simulation logger
+    :return:
+    """
     grid = list()
     try:
         traci.start(config.sumo_cmd)
@@ -199,6 +267,11 @@ def run(config, logger):
 
 
 def add_options(parser):
+    """
+    Add command line options
+    :param parser: The command line parser
+    :return:
+    """
     parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
                         help='Choose your configuration file from your working directory')
     parser.add_argument("-save", "--save", action="store_true",
@@ -212,6 +285,11 @@ def add_options(parser):
 
 
 def main(args):
+    """
+    The entry point of the application
+    :param args: Command line options
+    :return:
+    """
     parser = argparse.ArgumentParser(description="")
     add_options(parser)
     args = parser.parse_args(args)
