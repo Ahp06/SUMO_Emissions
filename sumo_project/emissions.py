@@ -24,6 +24,7 @@ from shapely.geometry import LineString
 This module defines the entry point of the application 
 """
 
+
 def init_grid(simulation_bounds, areas_number, window_size):
     """
     Initialize the grid of the loaded map from the configuration
@@ -43,7 +44,7 @@ def init_grid(simulation_bounds, areas_number, window_size):
             name = 'Area ({},{})'.format(i, j)
             area = Area(ar_bounds, name, window_size)
             grid.append(area)
-            traci.polygon.add(area.name, ar_bounds, (255, 0, 0))
+            traci.polygon.add(area.name, ar_bounds, (255, 0, 0))  # Add polygon for UI
     return grid
 
 
@@ -105,7 +106,7 @@ def add_data_to_areas(areas: List[Area]):
 def compute_vehicle_emissions(veh_id):
     """
     Recover the emissions of different pollutants from a vehicle and create an Emission instance
-    :param veh_id:
+    :param veh_id: The vehicle ID
     :return: A new Emission instance
     """
     co2 = traci.vehicle.getCO2Emission(veh_id)
@@ -148,8 +149,10 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
             if vehicle.pos in area:
                 total_emissions += vehicle.emissions
 
+        # Adding of the total of emissions pollutant at the current step into memory
         area.emissions_by_step.append(total_emissions)
 
+        # If the sum of pollutant emissions (in mg) exceeds the threshold
         if area.sum_emissions_into_window(current_step) >= config.emissions_threshold:
 
             if config.limit_speed_mode and not area.limited_speed:
@@ -178,8 +181,8 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 def get_reduction_percentage(ref, total):
     """
     Return the reduction percentage of total emissions between reference and an other simulation
-    :param ref:
-    :param total:
+    :param ref: The sum of all pollutant emissions (in mg) for the simulation of reference
+    :param total: The sum of all pollutant emissions (in mg) for the current simulation launched
     :return:
     """
     return (ref - total) / ref * 100
@@ -208,7 +211,7 @@ def export_data_to_csv(config, grid):
             writer.writerow(itertools.chain((step,), em_for_step))
 
 
-def run(config, logger):
+def run(config, logger, csv_export):
     """
     Run the simulation with the configuration chosen
     :param config: The simulation configuration
@@ -230,7 +233,7 @@ def run(config, logger):
 
         logger.info('Simulation started...')
         step = 0
-        while step < config.n_steps:  # traci.simulation.getMinExpectedNumber() > 0:
+        while step < config.n_steps:
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
@@ -241,10 +244,15 @@ def run(config, logger):
 
     finally:
         traci.close(False)
-        export_data_to_csv(config, grid)
+
+        if csv_export:
+            export_data_to_csv(config, grid)
+            logger.info(f'Exported data into the csv folder')
 
         simulation_time = round(time.perf_counter() - start, 2)
         logger.info(f'End of the simulation ({simulation_time}s)')
+
+        # 1 step is equal to one second simulated
         logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
 
         total_emissions = Emission()
@@ -253,9 +261,9 @@ def run(config, logger):
 
         logger.info(f'Total emissions = {total_emissions.value()} mg')
 
-        if not config.without_actions_mode:
+        if not config.without_actions_mode:  # If it's not a simulation without actions
             ref = config.get_ref_emissions()
-            if not (ref is None):
+            if not (ref is None):  # If a reference value exist (add yours into config.py)
                 global_diff = (ref.value() - total_emissions.value()) / ref.value()
 
                 logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
@@ -281,7 +289,9 @@ def add_options(parser):
     parser.add_argument("-ref", "--ref", action="store_true",
                         help='Launch a reference simulation (without acting on areas)')
     parser.add_argument("-gui", "--gui", action="store_true",
-                        help="Set GUI mode")
+                        help="Show UI")
+    parser.add_argument("-csv", "--csv", action="store_true",
+                        help="Export all data emissions into a CSV file")
 
 
 def main(args):
@@ -295,9 +305,10 @@ def main(args):
     args = parser.parse_args(args)
 
     config = Config()
-    config.import_config_file(args.configfile)
+    config.import_config_file(args.configfile)  # By default the configfile is default_config.json
     config.init_traci()
     logger = config.init_logger(save_logs=args.save)
+    csv_export = False
 
     if args.ref:
         config.without_actions_mode = True
@@ -309,11 +320,14 @@ def main(args):
     if args.gui:
         config._SUMOCMD = "sumo-gui"
 
+    if args.csv:
+        csv_export = True
+
     config.check_config()
 
     logger.info(f'Loaded configuration file : {args.configfile}')
     logger.info(f'Simulated time : {args.steps}s')
-    run(config, logger)
+    run(config, logger, csv_export)
 
 
 if __name__ == '__main__':

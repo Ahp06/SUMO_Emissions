@@ -13,6 +13,7 @@ from model import Area, Vehicle
 This module defines all possible actions on the simulation
 """
 
+
 def compute_edge_weight(edge_id):
     """
     Sum the different pollutant emissions on the edge with the identifier edge_id
@@ -100,7 +101,9 @@ def count_vehicles_in_area(area):
 def lock_area(area):
     """
     Prohibits access to the area to a particular vehicle class
-    NOT FIXED : Some vehicles continue to go into the area if they can not turn around and stay there
+    NOT FIXED : Some vehicles continue to go into the area
+    if they can not turn around and then will stay blocked there
+    as long as it will not be reversed
     :param area: The Area object
     :return:
     """

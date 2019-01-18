@@ -41,22 +41,9 @@ class Config:
         with open(config_file, 'r') as f:
             data = json.load(f)
 
-        self._SUMOCMD = data["_SUMOCMD"]
-        self._SUMOCFG = data["_SUMOCFG"]
-
-        self.areas_number = data["areas_number"]
-        self.emissions_threshold = data["emissions_threshold"]
-        self.n_steps = data["n_steps"]
-        self.window_size = data["window_size"]
-
-        self.without_actions_mode = data["without_actions_mode"]
-        self.limit_speed_mode = data["limit_speed_mode"]
-        self.speed_rf = data["speed_rf"]
-        self.adjust_traffic_light_mode = data["adjust_traffic_light_mode"]
-        self.trafficLights_duration_rf = data["trafficLights_duration_rf"]
-        self.weight_routing_mode = data["weight_routing_mode"]
-        self.lock_area_mode = data["lock_area_mode"]
-
+        for option in data:
+            self.__setattr__(option, data[option])
+        self.config_filename = os.path.basename(f.name)
         self.check_config()
 
     def check_config(self):
@@ -64,13 +51,13 @@ class Config:
         Check the relevance of user configuration choices
         :return:
         """
-        # Weight routing mode cannot be combinated with other actions
+        # Weight routing mode cannot be combined with other actions
         if self.weight_routing_mode:
             self.limit_speed_mode = False
             self.adjust_traffic_light_mode = False
             self.lock_area_mode = False
 
-        # If without_actions_mode is choosen
+        # If without_actions_mode is chosen
         if self.without_actions_mode:
             self.limit_speed_mode = False
             self.adjust_traffic_light_mode = False
@@ -118,7 +105,7 @@ class Config:
         if not os.path.exists('logs'):
             os.makedirs('logs')
 
-        log_filename = f'logs/sumo_logs_{current_date}.log'
+        log_filename = f'logs/sumo_logs_{current_date}_{self.config_filename}.log'
 
         logger = logging.getLogger("sumo_logger")
         logger.setLevel(logging.INFO)
