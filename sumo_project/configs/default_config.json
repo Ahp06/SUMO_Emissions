@@ -7,7 +7,7 @@
 	"n_steps": 200,
 	"window_size":100,
 	
-	"without_actions_mode": false,
+	"without_actions_mode": true,
 	
 	"limit_speed_mode": true,
 	"speed_rf": 0.1,

@@ -13,6 +13,8 @@ import sys
 import time
 from typing import List
 
+
+from data import Data
 import actions
 import traci
 from config import Config
@@ -23,85 +25,6 @@ from shapely.geometry import LineString
 """
 This module defines the entry point of the application 
 """
-
-
-def init_grid(simulation_bounds, areas_number, window_size):
-    """
-    Initialize the grid of the loaded map from the configuration
-    :param simulation_bounds: The map bounds
-    :param areas_number: The number of areas
-    :param window_size: The size of the acquisition window
-    :return: A list of areas
-    """
-    grid = list()
-    width = simulation_bounds[1][0] / areas_number
-    height = simulation_bounds[1][1] / areas_number
-    for i in range(areas_number):
-        for j in range(areas_number):
-            # bounds coordinates for the area : (xmin, ymin, xmax, ymax)
-            ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
-                         ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
-            name = 'Area ({},{})'.format(i, j)
-            area = Area(ar_bounds, name, window_size)
-            grid.append(area)
-            traci.polygon.add(area.name, ar_bounds, (255, 0, 0))  # Add polygon for UI
-    return grid
-
-
-def get_all_lanes() -> List[Lane]:
-    """
-    Recover and creates a list of Lane objects
-    :return: The lanes list
-    """
-    lanes = []
-    for lane_id in traci.lane.getIDList():
-        polygon_lane = LineString(traci.lane.getShape(lane_id))
-        initial_max_speed = traci.lane.getMaxSpeed(lane_id)
-        lanes.append(Lane(lane_id, polygon_lane, initial_max_speed))
-    return lanes
-
-
-def parse_phase(phase_repr):
-    """
-    Because the SUMO object Phase does not contain accessors,
-    we parse the string representation to retrieve data members.
-    :param phase_repr: The Phase string representation
-    :return: An new Phase instance
-    """
-    duration = search('duration: {:f}', phase_repr)
-    min_duration = search('minDuration: {:f}', phase_repr)
-    max_duration = search('maxDuration: {:f}', phase_repr)
-    phase_def = search('phaseDef: {}\n', phase_repr)
-
-    if phase_def is None:
-        phase_def = ''
-    else:
-        phase_def = phase_def[0]
-
-    return Phase(duration[0], min_duration[0], max_duration[0], phase_def)
-
-
-def add_data_to_areas(areas: List[Area]):
-    """
-    Adds all recovered data to different areas
-    :param areas: The list of areas
-    :return:
-    """
-    lanes = get_all_lanes()
-    for area in areas:
-        for lane in lanes:  # add lanes 
-            if area.rectangle.intersects(lane.polygon):
-                area.add_lane(lane)
-                for tl_id in traci.trafficlight.getIDList():  # add traffic lights 
-                    if lane.lane_id in traci.trafficlight.getControlledLanes(tl_id):
-                        logics = []
-                        for l in traci.trafficlight.getCompleteRedYellowGreenDefinition(tl_id):  # add logics 
-                            phases = []
-                            for phase in traci.trafficlight.Logic.getPhases(l):  # add phases to logics
-                                phases.append(parse_phase(phase.__repr__()))
-                            logics.append(Logic(l, phases))
-                        area.add_tl(TrafficLight(tl_id, logics))
-
 
 def compute_vehicle_emissions(veh_id):
     """
@@ -211,22 +134,24 @@ def export_data_to_csv(config, grid):
             writer.writerow(itertools.chain((step,), em_for_step))
 
 
-def run(config, logger, csv_export):
+def run(config, logger, csv_export, dump_name):
     """
     Run the simulation with the configuration chosen
     :param config: The simulation configuration
     :param logger: The simulation logger
     :return:
     """
-    grid = list()
+    
     try:
         traci.start(config.sumo_cmd)
         logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
 
-        grid = init_grid(traci.simulation.getNetBoundary(), config.areas_number, config.window_size)
-        add_data_to_areas(grid)
+        data = Data(traci.simulation.getNetBoundary(), config)
+        data.init_grid()
+        data.add_data_to_areas() 
+        data.save(dump_name)
 
         loading_time = round(time.perf_counter() - start, 2)
         logger.info(f'Data loaded ({loading_time}s)')
@@ -237,16 +162,16 @@ def run(config, logger, csv_export):
             traci.simulationStep()
 
             vehicles = get_all_vehicles()
-            get_emissions(grid, vehicles, step, config, logger)
+            get_emissions(data.grid, vehicles, step, config, logger)
             step += 1
 
             print(f'step = {step}/{config.n_steps}', end='\r')
 
     finally:
         traci.close(False)
-
+        
         if csv_export:
-            export_data_to_csv(config, grid)
+            export_data_to_csv(config, data.grid)
             logger.info(f'Exported data into the csv folder')
 
         simulation_time = round(time.perf_counter() - start, 2)
@@ -256,7 +181,7 @@ def run(config, logger, csv_export):
         logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
 
         total_emissions = Emission()
-        for area in grid:
+        for area in data.grid:
             total_emissions += area.sum_all_emissions()
 
         logger.info(f'Total emissions = {total_emissions.value()} mg')
@@ -280,6 +205,8 @@ def add_options(parser):
     :param parser: The command line parser
     :return:
     """
+    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
+                        help='Choose your configuration file from your working directory')
     parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
                         help='Choose your configuration file from your working directory')
     parser.add_argument("-save", "--save", action="store_true",
@@ -327,7 +254,7 @@ def main(args):
 
     logger.info(f'Loaded configuration file : {args.configfile}')
     logger.info(f'Simulated time : {args.steps}s')
-    run(config, logger, csv_export)
+    run(config, logger, csv_export, dump_name)
 
 
 if __name__ == '__main__':
