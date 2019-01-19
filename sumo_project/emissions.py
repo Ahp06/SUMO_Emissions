@@ -4,6 +4,10 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
+"""
+This module defines the entry point of the application 
+"""
+
 import argparse
 import csv
 import datetime
@@ -11,20 +15,18 @@ import itertools
 import os
 import sys
 import time
+import traci
 from typing import List
 
-
-from data import Data
-import actions
-import traci
-from config import Config
-from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+import jsonpickle
 from parse import search
 from shapely.geometry import LineString
 
-"""
-This module defines the entry point of the application 
-"""
+import actions
+from config import Config
+from data import Data
+from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+
 
 def compute_vehicle_emissions(veh_id):
     """
@@ -133,129 +135,3 @@ def export_data_to_csv(config, grid):
             em_for_step = (f'{a.emissions_by_step[step].value():.3f}' for a in grid)
             writer.writerow(itertools.chain((step,), em_for_step))
 
-
-def run(config, logger, csv_export, dump_name):
-    """
-    Run the simulation with the configuration chosen
-    :param config: The simulation configuration
-    :param logger: The simulation logger
-    :return:
-    """
-    
-    try:
-        traci.start(config.sumo_cmd)
-        logger.info(f'Loaded simulation file : {config._SUMOCFG}')
-        logger.info('Loading data for the simulation')
-        start = time.perf_counter()
-
-        data = Data(traci.simulation.getNetBoundary(), config)
-        data.init_grid()
-        data.add_data_to_areas() 
-        data.save(dump_name)
-
-        loading_time = round(time.perf_counter() - start, 2)
-        logger.info(f'Data loaded ({loading_time}s)')
-
-        logger.info('Simulation started...')
-        step = 0
-        while step < config.n_steps:
-            traci.simulationStep()
-
-            vehicles = get_all_vehicles()
-            get_emissions(data.grid, vehicles, step, config, logger)
-            step += 1
-
-            print(f'step = {step}/{config.n_steps}', end='\r')
-
-    finally:
-        traci.close(False)
-        
-        if csv_export:
-            export_data_to_csv(config, data.grid)
-            logger.info(f'Exported data into the csv folder')
-
-        simulation_time = round(time.perf_counter() - start, 2)
-        logger.info(f'End of the simulation ({simulation_time}s)')
-
-        # 1 step is equal to one second simulated
-        logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
-
-        total_emissions = Emission()
-        for area in data.grid:
-            total_emissions += area.sum_all_emissions()
-
-        logger.info(f'Total emissions = {total_emissions.value()} mg')
-
-        if not config.without_actions_mode:  # If it's not a simulation without actions
-            ref = config.get_ref_emissions()
-            if not (ref is None):  # If a reference value exist (add yours into config.py)
-                global_diff = (ref.value() - total_emissions.value()) / ref.value()
-
-                logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
-                logger.info(f'-> CO2 emissions = {get_reduction_percentage(ref.co2, total_emissions.co2)} %')
-                logger.info(f'-> CO emissions = {get_reduction_percentage(ref.co, total_emissions.co)} %')
-                logger.info(f'-> Nox emissions = {get_reduction_percentage(ref.nox, total_emissions.nox)} %')
-                logger.info(f'-> HC emissions = {get_reduction_percentage(ref.hc, total_emissions.hc)} %')
-                logger.info(f'-> PMx emissions = {get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')
-
-
-def add_options(parser):
-    """
-    Add command line options
-    :param parser: The command line parser
-    :return:
-    """
-    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
-                        help='Choose your configuration file from your working directory')
-    parser.add_argument("-f", "--configfile", type=str, default='configs/default_config.json', required=False,
-                        help='Choose your configuration file from your working directory')
-    parser.add_argument("-save", "--save", action="store_true",
-                        help='Save the logs into the logs folder')
-    parser.add_argument("-steps", "--steps", type=int, default=200, required=False,
-                        help='Choose the simulated time (in seconds)')
-    parser.add_argument("-ref", "--ref", action="store_true",
-                        help='Launch a reference simulation (without acting on areas)')
-    parser.add_argument("-gui", "--gui", action="store_true",
-                        help="Show UI")
-    parser.add_argument("-csv", "--csv", action="store_true",
-                        help="Export all data emissions into a CSV file")
-
-
-def main(args):
-    """
-    The entry point of the application
-    :param args: Command line options
-    :return:
-    """
-    parser = argparse.ArgumentParser(description="")
-    add_options(parser)
-    args = parser.parse_args(args)
-
-    config = Config()
-    config.import_config_file(args.configfile)  # By default the configfile is default_config.json
-    config.init_traci()
-    logger = config.init_logger(save_logs=args.save)
-    csv_export = False
-
-    if args.ref:
-        config.without_actions_mode = True
-        logger.info(f'Reference simulation')
-
-    if args.steps:
-        config.n_steps = args.steps
-
-    if args.gui:
-        config._SUMOCMD = "sumo-gui"
-
-    if args.csv:
-        csv_export = True
-
-    config.check_config()
-
-    logger.info(f'Loaded configuration file : {args.configfile}')
-    logger.info(f'Simulated time : {args.steps}s')
-    run(config, logger, csv_export, dump_name)
-
-
-if __name__ == '__main__':
-    main(sys.argv[1:])

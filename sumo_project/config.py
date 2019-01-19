@@ -4,6 +4,10 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
+"""
+This module defines the global configuration for the simulation
+"""
+
 import datetime
 import json
 import logging
@@ -11,10 +15,6 @@ import os
 import sys
 
 from model import Emission
-
-"""
-This module defines the global configuration for the simulation
-"""
 
 
 class Config:

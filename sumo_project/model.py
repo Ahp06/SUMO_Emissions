@@ -4,17 +4,17 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
+"""
+This module defines the business model of our application
+"""
+
 import collections
+from traci._trafficlight import Logic as SUMO_Logic
 from typing import Tuple, Set
 
 from shapely.geometry import Point, LineString
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from traci._trafficlight import Logic as SUMO_Logic
-
-"""
-This module defines the business model of our application
-"""
 
 
 class Lane:

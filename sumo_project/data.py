@@ -4,28 +4,29 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
+"""
+This module is used for loading simulation data 
+"""
+
 import argparse
 import csv
 import datetime
 import itertools
+import json
 import os
+import pprint
 import sys
 import time
-from typing import List
-import json
-import jsonpickle
-import pprint
-
-import actions
 import traci
-from config import Config
-from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+from typing import List
+
+import jsonpickle
 from parse import search
 from shapely.geometry import LineString
 
-"""
-This module is used for loading simulation data 
-"""
+import actions
+from config import Config
+from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 
 
 class Data: 
@@ -115,17 +116,17 @@ class Data:
                                 logics.append(Logic(l, phases))
                             area.add_tl(TrafficLight(tl_id, logics))
                             
-    def save(self,dump_name):
+    def save(self, dump_name):
         """
         Save simulation data into a json file 
         :param dump_name: The name of your data dump
         :return:
         """
-        dump_dir = 'dump'
+        dump_dir = 'files/dump'
         if not os.path.exists(dump_dir):
             os.mkdir(dump_dir)
         
-        s = json.dumps(json.loads(jsonpickle.encode(self)), indent=4) # for pretty JSON 
+        s = json.dumps(json.loads(jsonpickle.encode(self)), indent=4)  # for pretty JSON 
         with open(f'{dump_dir}/{dump_name}.json', 'w') as f:
             f.write(s)
         
