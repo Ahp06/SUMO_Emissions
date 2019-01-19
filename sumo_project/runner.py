@@ -31,12 +31,6 @@ def add_options(parser):
         
     parser.add_argument("-save", "--save", action="store_true",
                         help='Save the logs into the logs folder')
-    parser.add_argument("-steps", "--steps", type=int, default=200, required=False,
-                        help='Choose the simulated time (in seconds)')
-    parser.add_argument("-ref", "--ref", action="store_true",
-                        help='Launch a reference simulation (without acting on areas)')
-    parser.add_argument("-gui", "--gui", action="store_true",
-                        help="Show UI")
     parser.add_argument("-csv", "--csv", action="store_true",
                         help="Export all data emissions into a CSV file")
 
@@ -48,10 +42,10 @@ def create_dump(config_file, dump_name):
     config.check_config()
     config.init_traci()
     
-    """with open(f'dump/{dump_name}.json', 'r') as f:
-            data = jsonpickle.decode(f.read())"""
-            
-    traci.start(config.sumo_cmd)
+    sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', 'sumo')
+    sumo_cmd = [sumo_binary, "-c", config._SUMOCFG]
+    
+    traci.start(sumo_cmd)
     if not os.path.isfile(f'files/dump/{dump_name}.json'):
         start = time.perf_counter()
         data = Data(traci.simulation.getNetBoundary(), config)
@@ -71,6 +65,10 @@ def create_dump(config_file, dump_name):
 def run(data : Data, config : Config, logger):
     try:
         traci.start(config.sumo_cmd)
+                        
+        for area in data.grid: 
+            traci.polygon.add(area.name, area.rectangle.exterior.coords, (255, 0, 0))  # Add polygon for UI
+
         logger.info(f'Loaded simulation file : {config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
@@ -105,48 +103,43 @@ def main(args):
     
     if args.run is not None:
         dump_path = f'files/dump/{args.run}.json'
-        if not os.path.isfile(dump_path):
+        if os.path.isfile(dump_path):
             with open(dump_path, 'r') as f:
                 data = jsonpickle.decode(f.read())
-                config = data.config
-                logger = config.init_logger(save_logs=args.save)
-                logger.info(f'Running simulation dump {args.run}...')
-                if args.ref:
-                    config.without_actions_mode = True
-                    logger.info(f'Reference simulation')
-                if args.steps: config.n_steps = args.steps
-                if args.gui: config._SUMOCMD = "sumo-gui"
-                
-                start = time.perf_counter()
-                run(data, config, logger)
+            config = data.config
+            logger = config.init_logger(save_logs=args.save)
+            logger.info(f'Running simulation dump {args.run}...')  
+            start = time.perf_counter()
+            run(data, config, logger)
 
     if args.csv:
         emissions.export_data_to_csv(config, data.grid)
         logger.info(f'Exported data into the csv folder')
     
-        simulation_time = round(time.perf_counter() - start, 2)
-        logger.info(f'End of the simulation ({simulation_time}s)')
+    simulation_time = round(time.perf_counter() - start, 2)
+    logger.info(f'End of the simulation ({simulation_time}s)')
     
-        # 1 step is equal to one second simulated
-        logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
+    # 1 step is equal to one second simulated
+    logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
     
-        total_emissions = Emission()
-        for area in data.grid:
-            total_emissions += area.sum_all_emissions()
+    total_emissions = Emission()
+    for area in data.grid:
+        total_emissions += area.sum_all_emissions()
     
-        logger.info(f'Total emissions = {total_emissions.value()} mg')
+    logger.info(f'Total emissions = {total_emissions.value()} mg')
     
-        if not config.without_actions_mode:  # If it's not a simulation without actions
-            ref = config.get_ref_emissions()
-            if not (ref is None):  # If a reference value exist (add yours into config.py)
-                global_diff = (ref.value() - total_emissions.value()) / ref.value()
+    if not config.without_actions_mode:  # If it's not a simulation without actions
+        ref = config.get_ref_emissions()
+        if not (ref is None):  # If a reference value exist (add yours into config.py)
+            global_diff = (ref.value() - total_emissions.value()) / ref.value()
     
-                logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
-                logger.info(f'-> CO2 emissions = {emissions.get_reduction_percentage(ref.co2, total_emissions.co2)} %')
-                logger.info(f'-> CO emissions = {emissions.get_reduction_percentage(ref.co, total_emissions.co)} %')
-                logger.info(f'-> Nox emissions = {emissions.get_reduction_percentage(ref.nox, total_emissions.nox)} %')
-                logger.info(f'-> HC emissions = {emissions.get_reduction_percentage(ref.hc, total_emissions.hc)} %')
-                logger.info(f'-> PMx emissions = {emissions.get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')    
+            logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
+            logger.info(f'-> CO2 emissions = {emissions.get_reduction_percentage(ref.co2, total_emissions.co2)} %')
+            logger.info(f'-> CO emissions = {emissions.get_reduction_percentage(ref.co, total_emissions.co)} %')
+            logger.info(f'-> Nox emissions = {emissions.get_reduction_percentage(ref.nox, total_emissions.nox)} %')
+            logger.info(f'-> HC emissions = {emissions.get_reduction_percentage(ref.hc, total_emissions.hc)} %')
+            logger.info(f'-> PMx emissions = {emissions.get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')    
+
     
 if __name__ == '__main__':
     main(sys.argv[1:])

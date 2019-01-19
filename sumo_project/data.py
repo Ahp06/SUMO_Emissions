@@ -46,7 +46,6 @@ class Data:
         :param window_size: The size of the acquisition window
         :return: A list of areas
         """
-        from distutils.command.config import config
         self.grid = list()
         areas_number = self.config.areas_number
         window_size = self.config.window_size
@@ -61,7 +60,6 @@ class Data:
                 name = 'Area ({},{})'.format(i, j)
                 area = Area(ar_bounds, name, window_size)
                 self.grid.append(area)
-                traci.polygon.add(area.name, ar_bounds, (255, 0, 0))  # Add polygon for UI
         return self.grid
     
     def get_all_lanes(self) -> List[Lane]:

@@ -120,13 +120,13 @@ def export_data_to_csv(config, grid):
     :param grid: The list of areas
     :return:
     """
-    csv_dir = 'csv'
+    csv_dir = 'files/csv'
     if not os.path.exists(csv_dir):
         os.mkdir(csv_dir)
 
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    with open(f'csv/{now}.csv', 'w') as f:
+    with open(f'files/csv/{now}.csv', 'w') as f:
         writer = csv.writer(f)
         # Write CSV headers
         writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))

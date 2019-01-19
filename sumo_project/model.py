@@ -150,7 +150,7 @@ class Emission:
 
 class Area:
     """
-    The Area class defines a grid area of ​​the map
+    The Area class defines a grid area of the simulation map
     """
 
     def __init__(self, coords, name, window_size):

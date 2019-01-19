@@ -38,7 +38,7 @@ class Config:
         :param config_file: The path to your configuration file
         :return:
         """
-        with open(config_file, 'r') as f:
+        with open(f'files/configs/{config_file}.json', 'r') as f:
             data = json.load(f)
 
         for option in data:
@@ -102,10 +102,10 @@ class Config:
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
 
-        if not os.path.exists('logs'):
+        if not os.path.exists('files/logs'):
             os.makedirs('logs')
 
-        log_filename = f'logs/sumo_logs_{current_date}_{self.config_filename}.log'
+        log_filename = f'files/logs/sumo_logs_{current_date}_{self.config_filename}.log'
 
         logger = logging.getLogger("sumo_logger")
         logger.setLevel(logging.INFO)
