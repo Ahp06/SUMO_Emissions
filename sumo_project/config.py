@@ -93,7 +93,7 @@ class Config:
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
 
-    def init_logger(self, save_logs=False):
+    def init_logger(self, dump_name, save_logs=False):
         """
         Init the application logger
         :param save_logs: If save_logs is True, it will save the logs into the logs directory
@@ -105,7 +105,7 @@ class Config:
         if not os.path.exists('files/logs'):
             os.makedirs('logs')
 
-        log_filename = f'files/logs/sumo_logs_{current_date}_{self.config_filename}.log'
+        log_filename = f'files/logs/{dump_name}_{current_date}.log'
 
         logger = logging.getLogger("sumo_logger")
         logger.setLevel(logging.INFO)
