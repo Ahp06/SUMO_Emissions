@@ -25,30 +25,25 @@ from parse import search
 from shapely.geometry import LineString
 
 import actions
-from config import Config
 from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 
 
 class Data: 
     
-    def __init__(self, map_bounds, config : Config):
+    def __init__(self, map_bounds, areas_number,simulation_dir):
         """
         Data constructor
         """
         self.map_bounds = map_bounds
-        self.config = config
-    
+        self.areas_number = areas_number
+        self.dir = simulation_dir
+        
     def init_grid(self):
         """
-        Initialize the grid of the loaded map from the configuration
-        :param self.map_bounds: The map bounds
-        :param areas_number: The number of areas
-        :param window_size: The size of the acquisition window
-        :return: A list of areas
+        Initialize the grid of the loaded map from the cfg file with areas_number x areas_number areas
         """
         self.grid = list()
-        areas_number = self.config.areas_number
-        window_size = self.config.window_size
+        areas_number = self.areas_number
         
         width = self.map_bounds[1][0] / areas_number
         height = self.map_bounds[1][1] / areas_number
@@ -58,7 +53,7 @@ class Data:
                 ar_bounds = ((i * width, j * height), (i * width, (j + 1) * height),
                              ((i + 1) * width, (j + 1) * height), ((i + 1) * width, j * height))
                 name = 'Area ({},{})'.format(i, j)
-                area = Area(ar_bounds, name, window_size)
+                area = Area(ar_bounds, name)
                 self.grid.append(area)
         return self.grid
     

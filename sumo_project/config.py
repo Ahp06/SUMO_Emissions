@@ -31,7 +31,7 @@ class Config:
         """
         Default constructor
         """
-
+        
     def import_config_file(self, config_file):
         """
         Import your configuration file in JSON format
@@ -78,8 +78,8 @@ class Config:
             f'adjust traffic light mode = {self.adjust_traffic_light_mode},'
             f'RF = {self.trafficLights_duration_rf * 100}%\n'
         )
-
-    def init_traci(self):
+        
+    def init_traci(self, simulation_dir):
         """
         Init the Traci API
         :return:
@@ -89,7 +89,8 @@ class Config:
             sys.path.append(tools)
         else:
             sys.exit("please declare environment variable 'SUMO_HOME'")
-
+        
+        self._SUMOCFG = f'files/simulations/{simulation_dir}/osm.sumocfg'
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
 

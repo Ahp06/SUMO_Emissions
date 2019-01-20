@@ -153,13 +153,12 @@ class Area:
     The Area class defines a grid area of the simulation map
     """
 
-    def __init__(self, coords, name, window_size):
+    def __init__(self, coords, name):
         """
         Area constructor
         :param coords: The coordinates of the zone,
         defined by the bounds coordinates of this area : (xmin, ymin, xmax, ymax)
         :param name: The Area name
-        :param window_size: The size of the acquisition window
         """
         self.limited_speed = False
         self.locked = False
@@ -168,10 +167,12 @@ class Area:
         self.rectangle = Polygon(coords)
         self.name = name
         self.emissions_by_step = []
-        self.window = collections.deque(maxlen=window_size)
         self._lanes: Set[Lane] = set()
         self._tls: Set[TrafficLight] = set()
 
+    def set_window_size(self, window_size):
+        self.window = collections.deque(maxlen=window_size)
+        
     def __eq__(self, other):
         """
         Overrides the equal definition
