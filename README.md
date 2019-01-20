@@ -6,7 +6,7 @@ Using the SUMO simulator, we developed several parameters and measures using Tra
 We imagined that for a map of a given city, the city would be divided into areas, 
 which when the pollution rate exceeds a certain threshold in these then we act on the infrastructure and the vehicles present in this zone.
 
-![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/imgs/simulation_example.PNG)
+![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/simulation_example.PNG)
 
 # Prerequisites:
 * Python 3.7
@@ -20,16 +20,8 @@ You can use your own scenario file (osm.sumocfg file), see : [SUMO Tutorials](ht
 
 **With a Shell:**
 
-`> py ./emissions.py [-h] [-f CONFIGFILE] [-save] [-ref] [-steps STEPS]`
+![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/runner_help.PNG)
 
-* [-h] : Commands help 
-* [-f CONFIGFILE] : Choose your configuration file from your working directory
-* [-save] : Save the logs, by default logs will be in the logs file in the working directory with this format: 
-`sumo_project/logs/sumo_logs_{current_timestamp}.log`
-* [-ref] : Launch a reference simulation (without acting on infrastructure and vehicles
-* [-steps STEPS] : Choose the simulated time (in seconds) 
+Example : 
 
-Ex : `> py ./emissions.py -f configs/your_config.json -save -ref`
-
-
-
+![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/runner_example.PNG)
