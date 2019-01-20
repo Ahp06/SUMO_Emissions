@@ -33,10 +33,22 @@ def add_options(parser):
                         help='Save the logs into the logs folder')
     parser.add_argument("-csv", "--csv", action="store_true",
                         help="Export all data emissions into a CSV file")
+    
+    parser.add_argument("-steps", "--steps", type=int, default=200, required=False,
+                        help='Choose the simulated time (in seconds)')
+    parser.add_argument("-ref", "--ref", action="store_true",
+                        help='Launch a reference simulation (without acting on areas)')
+    parser.add_argument("-gui", "--gui", action="store_true",
+                        help="Set GUI mode")
 
 
 def create_dump(config_file, dump_name):
-    
+    """
+    Create a new dump with config file and dump_name chosen 
+    :param config_file: The configuration file 
+    :param dump_name: The dump name
+    :return:
+    """
     config = Config()
     config.import_config_file(config_file)
     config.check_config()
@@ -62,27 +74,32 @@ def create_dump(config_file, dump_name):
     traci.close(False)
 
 
-def run(data : Data, config : Config, logger):
+def run(data : Data, logger):
+    """
+    Run a data set 
+    :param data: The data instance 
+    :param logger: The logger instance
+    """
     try:
-        traci.start(config.sumo_cmd)
+        traci.start(data.config.sumo_cmd)
                         
         for area in data.grid: 
             traci.polygon.add(area.name, area.rectangle.exterior.coords, (255, 0, 0))  # Add polygon for UI
 
-        logger.info(f'Loaded simulation file : {config._SUMOCFG}')
+        logger.info(f'Loaded simulation file : {data.config._SUMOCFG}')
         logger.info('Loading data for the simulation')
         start = time.perf_counter()
         
         logger.info('Simulation started...')
         step = 0
-        while step < config.n_steps:
+        while step < data.config.n_steps:
             traci.simulationStep()
     
             vehicles = emissions.get_all_vehicles()
-            emissions.get_emissions(data.grid, vehicles, step, config, logger)
+            emissions.get_emissions(data.grid, vehicles, step, data.config, logger)
             step += 1
     
-            print(f'step = {step}/{config.n_steps}', end='\r')
+            print(f'step = {step}/{data.config.n_steps}', end='\r')
     
     finally:
         traci.close(False)
@@ -99,28 +116,41 @@ def main(args):
     args = parser.parse_args(args)
     
     if args.new_dump is not None:
-        create_dump(args.new_dump[0], args.new_dump[1])
+        create_dump(args.new_dump[0], args.new_dump[1])  # (config_file, dump_name)
     
     if args.run is not None:
         dump_path = f'files/dump/{args.run}.json'
         if os.path.isfile(dump_path):
             with open(dump_path, 'r') as f:
                 data = jsonpickle.decode(f.read())
-            config = data.config
-            logger = config.init_logger(save_logs=args.save)
+                
+            data.config.init_traci()
+            logger = data.config.init_logger(dump_name=args.run, save_logs=args.save)
+                
+            if args.gui: 
+                data.config._SUMOCMD = "sumo-gui"
+                
+            if args.ref:
+                data.config.without_actions_mode = True
+                logger.info(f'Reference simulation')
+
+            if args.steps:
+                data.config.n_steps = args.steps
+            
+            data.config.check_config()    
+            
             logger.info(f'Running simulation dump {args.run}...')  
             start = time.perf_counter()
-            run(data, config, logger)
-
+            run(data, logger)
+            simulation_time = round(time.perf_counter() - start, 2)
+            logger.info(f'End of the simulation ({simulation_time}s)')
+    
     if args.csv:
-        emissions.export_data_to_csv(config, data.grid)
+        emissions.export_data_to_csv(data.config, data.grid, dump_name=args.run)
         logger.info(f'Exported data into the csv folder')
     
-    simulation_time = round(time.perf_counter() - start, 2)
-    logger.info(f'End of the simulation ({simulation_time}s)')
-    
     # 1 step is equal to one second simulated
-    logger.info(f'Real-time factor : {config.n_steps / simulation_time}')
+    logger.info(f'Real-time factor : {data.config.n_steps / simulation_time}')
     
     total_emissions = Emission()
     for area in data.grid:
@@ -128,8 +158,8 @@ def main(args):
     
     logger.info(f'Total emissions = {total_emissions.value()} mg')
     
-    if not config.without_actions_mode:  # If it's not a simulation without actions
-        ref = config.get_ref_emissions()
+    if not data.config.without_actions_mode:  # If it's not a simulation without actions
+        ref = data.config.get_ref_emissions()
         if not (ref is None):  # If a reference value exist (add yours into config.py)
             global_diff = (ref.value() - total_emissions.value()) / ref.value()
     
