@@ -9,8 +9,9 @@ which when the pollution rate exceeds a certain threshold in these then we act o
 ![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/simulation_example.PNG)
 
 # Prerequisites:
-* Python 3.7
-* SUMO 1.1.0
+* Python >3.7 : https://www.python.org/downloads/
+* External Python librairies : shapely, parse, jsonpickle : ``` > pip install [LIBRARY_NAME] ```
+* SUMO 1.1.0 : http://sumo.dlr.de/wiki/Downloads
 
 # How to run 
 
