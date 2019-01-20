@@ -25,7 +25,7 @@ def add_options(parser):
     :return:
     """
     parser.add_argument("-new_dump", "--new_dump", metavar=('config_file', 'dump_name'), nargs=2, type=str,
-                        required=False, help='Load an create a new data dump with the configuration file chosen')
+                        required=False, help='Load and create a new data dump with the configuration file chosen')
     parser.add_argument("-run", "--run", type=str, required=False,
                         help='Run a simulation with the dump chosen')
         
