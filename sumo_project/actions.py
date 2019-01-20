@@ -4,14 +4,14 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
-from typing import Iterable
-
-import traci
-from model import Area, Vehicle
-
 """
 This module defines all possible actions on the simulation
 """
+
+import traci
+from typing import Iterable
+
+from model import Area, Vehicle
 
 
 def compute_edge_weight(edge_id):
