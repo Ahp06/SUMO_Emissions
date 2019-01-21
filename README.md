@@ -27,5 +27,5 @@ Example :
 
 ![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/runner_example.PNG)
 
-This command will create a new dump "dump1" with the configuration file "config" 
-and the simulation will be launched with CSV data export and logs backup.
+This command will run a simulation with dump "dump" with the configuration file "config" 
+with CSV data export and logs backup.
