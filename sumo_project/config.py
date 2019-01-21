@@ -82,14 +82,9 @@ class Config:
     def init_traci(self, simulation_dir):
         """
         Init the Traci API
+        :param simulation_dir: The path to the simulation directory
         :return:
         """
-        if 'SUMO_HOME' in os.environ:
-            tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
-            sys.path.append(tools)
-        else:
-            sys.exit("please declare environment variable 'SUMO_HOME'")
-        
         self._SUMOCFG = f'files/simulations/{simulation_dir}/osm.sumocfg'
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
@@ -97,6 +92,7 @@ class Config:
     def init_logger(self, dump_name, save_logs=False):
         """
         Init the application logger
+        :param dump_name: The name of the data dump to use 
         :param save_logs: If save_logs is True, it will save the logs into the logs directory
         :return:
         """
@@ -108,7 +104,7 @@ class Config:
 
         log_filename = f'files/logs/{dump_name}_{current_date}.log'
 
-        logger = logging.getLogger("sumo_logger")
+        logger = logging.getLogger(f'sumo_logger_{dump_name}')
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 

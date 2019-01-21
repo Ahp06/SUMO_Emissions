@@ -113,7 +113,7 @@ def get_reduction_percentage(ref, total):
     return (ref - total) / ref * 100
 
 
-def export_data_to_csv(config, grid,dump_name):
+def export_data_to_csv(config, conf, grid, dump_name):
     """
     Export all Emission objects as a CSV file into the csv directory
     :param config: The simulation configuration
@@ -126,7 +126,7 @@ def export_data_to_csv(config, grid,dump_name):
 
     now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    with open(f'files/csv/{dump_name}_{now}.csv', 'w') as f:
+    with open(f'files/csv/{dump_name}_{conf}_{now}.csv', 'w') as f:
         writer = csv.writer(f)
         # Write CSV headers
         writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))

@@ -129,7 +129,7 @@ class Emission:
         """
         Add two emission objects
         :param other: The other Emission object to add
-        :return: A new object whose emission values ​​are the sum of both Emission object
+        :return: A new object whose emission values are the sum of both Emission object
         """
         return Emission(self.co2 + other.co2, self.co + other.co, self.nox + other.nox, self.hc + other.hc,
                         self.pmx + other.pmx)

@@ -57,7 +57,8 @@ def add_options(parser):
 def create_dump(dump_name, simulation_dir, areas_number):
     """
     Create a new dump with config file and dump_name chosen 
-    :param cfg_file: The simulation file 
+    :param dump_name: The name of the data dump
+    :param simulation_dir: The simulation directory 
     :param areas_number: The number of areas in grid 
     :return:
     """
@@ -86,6 +87,7 @@ def run(data : Data, config : Config, logger):
     """
     Run a data set 
     :param data: The data instance 
+    :param config: The config instance
     :param logger: The logger instance
     """
     try:
