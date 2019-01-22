@@ -5,7 +5,7 @@ Created on 19 janv. 2019
 '''
 
 """
-Init the Traci API
+This module defines the entry point of the application
 """
 
 import argparse
@@ -26,7 +26,9 @@ from data import Data
 import emissions
 from model import Emission
 
-
+"""
+Init the Traci API
+"""
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(tools)
@@ -36,6 +38,13 @@ else:
 class RunProcess(multiprocessing.Process):
     
     def __init__(self, data : Data, config : Config, save_logs, csv_export):
+        """
+        RunProcess constructor
+        :param data: The data instance
+        :param config: The config instance
+        :param save_logs: If save_logs == True, it will save the logs into the logs directory 
+        :param csv_export: If csv_export == True, it will export all emissions data into a csv file 
+        """
         multiprocessing.Process.__init__(self)
         self.data = data 
         self.config = config
@@ -43,6 +52,9 @@ class RunProcess(multiprocessing.Process):
         self.csv_export = csv_export
         
     def init_logger(self):
+        """
+        Init logger properties 
+        """
         now = datetime.datetime.now()
         current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
 
@@ -142,7 +154,7 @@ class RunProcess(multiprocessing.Process):
             if self.csv_export:
                 self.export_data_to_csv()
                 self.logger.info(f'Exported data into the csv folder')
-
+                
 def create_dump(dump_name, simulation_dir, areas_number):
     """
     Create a new dump with config file and dump_name chosen 
@@ -220,17 +232,13 @@ def main(args):
             process = []
             
             if args.c is not None: 
-                
-                # Init 
-                for conf in args.c:   
-                    config = Config(conf,data)  
-                   
-                    p = RunProcess(data, config,args.save,args.csv)
-                    #p.init_logger()
-                    process.append(p)
+                for conf in args.c: # Initialize all process   
                     
+                    config = Config(conf,data)  
+                    p = RunProcess(data, config,args.save,args.csv)
+                    process.append(p)                    
                     p.start()
-                
+                    
                 for p in process : p.join()
                     
                 
