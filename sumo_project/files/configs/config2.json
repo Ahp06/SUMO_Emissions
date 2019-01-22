@@ -5,13 +5,13 @@
 	"n_steps": 200,
 	"window_size":100,
 	
-	"without_actions_mode": true,
+	"without_actions_mode": false,
 	
 	"limit_speed_mode": true,
-	"speed_rf": 0.1,
+	"speed_rf": 1.1,
 	
 	"adjust_traffic_light_mode": true,
-	"trafficLights_duration_rf": 0.2,
+	"trafficLights_duration_rf": 0.3,
 	
 	"weight_routing_mode": false,
 	
