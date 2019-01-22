@@ -15,7 +15,6 @@ from data import Data
 from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 from runner import RunProcess
 
-
 def compute_vehicle_emissions(veh_id):
     """
     Recover the emissions of different pollutants from a vehicle and create an Emission instance
