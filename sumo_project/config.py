@@ -15,6 +15,7 @@ import os
 import sys
 
 from model import Emission
+from data import Data
 
 
 class Config:
@@ -27,10 +28,13 @@ class Config:
     ref200 = Emission(co2=42816869.05436445, co=1128465.0343051048, nox=18389.648337283958, hc=6154.330914019103,
                       pmx=885.0829265236318)
 
-    def __init__(self):
+    def __init__(self,config_file, data : Data):
         """
         Default constructor
         """
+        self.import_config_file(config_file)
+        self.init_traci(data.dir)
+        self.check_config()
         
     def import_config_file(self, config_file):
         """

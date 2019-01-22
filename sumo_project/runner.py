@@ -49,10 +49,9 @@ class RunProcess(multiprocessing.Process):
         if not os.path.exists('files/logs'):
             os.makedirs('logs')
 
-        # log_filename = f'files/logs/{logger_name}_{current_date}.log'
-        log_filename = f'files/logs/{current_date}.log'
-
         conf_name = self.config.config_filename.replace('.json', '')
+        log_filename = f'files/logs/{self.data.dump_name}_{conf_name}_{current_date}.log'
+
         self.logger = logging.getLogger(f'{self.data.dir}_{conf_name}')
         self.logger.setLevel(logging.INFO)
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -144,34 +143,6 @@ class RunProcess(multiprocessing.Process):
                 self.export_data_to_csv()
                 self.logger.info(f'Exported data into the csv folder')
 
-        
-def add_options(parser):
-    """
-    Add command line options
-    :param parser: The command line parser
-    :return:
-    """
-    
-    # TODO: Faire que -areas & -simulation_dir soit requis si -new_dump 
-    # Faire que -c soit requis si -run
-     
-    parser.add_argument("-new_dump", "--new_dump", type=str,
-                        required=False, help='Load and create a new data dump with the configuration file chosen')
-    parser.add_argument("-areas", "--areas", type=int, required=False,
-                        help='Will create a grid with "areas x areas" areas')
-    parser.add_argument("-simulation_dir", "--simulation_dir", type=str, required=False,
-                        help='Choose the simulation directory')
-    
-    parser.add_argument("-run", "--run", type=str,
-                        help='Run a simulation with the dump chosen')
-    parser.add_argument("-c", "--c", nargs='+', type=str,
-                        help='Choose your configuration file from your working directory')
-    parser.add_argument("-save", "--save", action="store_true",
-                        help='Save the logs into the logs folder')
-    parser.add_argument("-csv", "--csv", action="store_true",
-                        help="Export all data emissions into a CSV file")
-
-    
 def create_dump(dump_name, simulation_dir, areas_number):
     """
     Create a new dump with config file and dump_name chosen 
@@ -198,8 +169,34 @@ def create_dump(dump_name, simulation_dir, areas_number):
     else:
         print(f'Dump with name {dump_name} already exist') 
         
-    traci.close(False)    
+    traci.close(False)  
+        
+def add_options(parser):
+    """
+    Add command line options
+    :param parser: The command line parser
+    :return:
+    """
     
+    # TODO: Faire que -areas & -simulation_dir soit requis si -new_dump 
+    # Faire que -c soit requis si -run
+     
+    parser.add_argument("-new_dump", "--new_dump", type=str,
+                        required=False, help='Load and create a new data dump with the configuration file chosen')
+    parser.add_argument("-areas", "--areas", type=int, required=False,
+                        help='Will create a grid with "areas x areas" areas')
+    parser.add_argument("-simulation_dir", "--simulation_dir", type=str, required=False,
+                        help='Choose the simulation directory')
+    
+    parser.add_argument("-run", "--run", type=str,
+                        help='Run a simulation with the dump chosen')
+    parser.add_argument("-c", "--c", nargs='+', type=str,
+                        help='Choose your configuration file from your working directory')
+    parser.add_argument("-save", "--save", action="store_true",
+                        help='Save the logs into the logs folder')
+    parser.add_argument("-csv", "--csv", action="store_true",
+                        help="Export all data emissions into a CSV file")
+   
 def main(args):
     """
     The entry point of the application
@@ -224,16 +221,12 @@ def main(args):
             
             if args.c is not None: 
                 
-                # Init all process 
-                for conf in args.c:  
-                    
-                    config = Config()  
-                    config.import_config_file(conf)
-                    config.init_traci(data.dir)
-                    config.check_config() 
-                    
+                # Init 
+                for conf in args.c:   
+                    config = Config(conf,data)  
+                   
                     p = RunProcess(data, config,args.save,args.csv)
-                    p.init_logger()
+                    #p.init_logger()
                     process.append(p)
                     
                     p.start()
