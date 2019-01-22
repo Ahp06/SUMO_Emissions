@@ -4,28 +4,16 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
-"""
-This module defines the entry point of the application 
-"""
-
-import argparse
-import csv
-import datetime
-import itertools
-import os
-import sys
-import time
 import traci
 from typing import List
 
-import jsonpickle
-from parse import search
 from shapely.geometry import LineString
 
 import actions
 from config import Config
 from data import Data
 from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+from runner import RunProcess
 
 
 def compute_vehicle_emissions(veh_id):
@@ -57,7 +45,7 @@ def get_all_vehicles() -> List[Vehicle]:
     return vehicles
 
 
-def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, config, logger):
+def get_emissions(p : RunProcess, vehicles: List[Vehicle], current_step):
     """
     For each area retrieves the acquired emissions in the window,
     and acts according to the configuration chosen by the user
@@ -68,7 +56,7 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
     :param logger: The simulation logger
     :return:
     """
-    for area in grid:
+    for area in p.data.grid:
         total_emissions = Emission()
         for vehicle in vehicles:
             if vehicle.pos in area:
@@ -76,24 +64,24 @@ def get_emissions(grid: List[Area], vehicles: List[Vehicle], current_step, confi
 
         # Adding of the total of emissions pollutant at the current step into memory
         area.emissions_by_step.append(total_emissions)
-
+        
         # If the sum of pollutant emissions (in mg) exceeds the threshold
-        if area.sum_emissions_into_window(current_step) >= config.emissions_threshold:
+        if area.sum_emissions_into_window(current_step) >= p.config.emissions_threshold:
 
-            if config.limit_speed_mode and not area.limited_speed:
-                logger.info(f'Action - Decreased max speed into {area.name} by {config.speed_rf * 100}%')
-                actions.limit_speed_into_area(area, config.speed_rf)
-                if config.adjust_traffic_light_mode and not area.tls_adjusted:
-                    logger.info(
-                        f'Action - Decreased traffic lights duration by {config.trafficLights_duration_rf * 100}%')
-                    actions.adjust_traffic_light_phase_duration(area, config.trafficLights_duration_rf)
+            if p.config.limit_speed_mode and not area.limited_speed:
+                p.logger.info(f'Action - Decreased max speed into {area.name} by {p.config.speed_rf * 100}%')
+                actions.limit_speed_into_area(area, p.config.speed_rf)
+                if p.config.adjust_traffic_light_mode and not area.tls_adjusted:
+                    p.logger.info(
+                        f'Action - Decreased traffic lights duration by {p.config.trafficLights_duration_rf * 100}%')
+                    actions.adjust_traffic_light_phase_duration(area, p.config.trafficLights_duration_rf)
 
-            if config.lock_area_mode and not area.locked:
+            if p.config.lock_area_mode and not area.locked:
                 if actions.count_vehicles_in_area(area):
-                    logger.info(f'Action - {area.name} blocked')
+                    p.logger.info(f'Action - {area.name} blocked')
                     actions.lock_area(area)
 
-            if config.weight_routing_mode and not area.weight_adjusted:
+            if p.config.weight_routing_mode and not area.weight_adjusted:
                 actions.adjust_edges_weights(area)
 
             traci.polygon.setFilled(area.name, True)
@@ -111,27 +99,4 @@ def get_reduction_percentage(ref, total):
     :return:
     """
     return (ref - total) / ref * 100
-
-
-def export_data_to_csv(config, conf, grid, dump_name):
-    """
-    Export all Emission objects as a CSV file into the csv directory
-    :param config: The simulation configuration
-    :param grid: The list of areas
-    :return:
-    """
-    csv_dir = 'files/csv'
-    if not os.path.exists(csv_dir):
-        os.mkdir(csv_dir)
-
-    now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-
-    with open(f'files/csv/{dump_name}_{conf}_{now}.csv', 'w') as f:
-        writer = csv.writer(f)
-        # Write CSV headers
-        writer.writerow(itertools.chain(('Step',), (a.name for a in grid)))
-        # Write all areas emission value for each step
-        for step in range(config.n_steps):
-            em_for_step = (f'{a.emissions_by_step[step].value():.3f}' for a in grid)
-            writer.writerow(itertools.chain((step,), em_for_step))
 

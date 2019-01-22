@@ -69,7 +69,6 @@ class Config:
         :return: All properties chosen by the user
         """
         return (
-            f'grid : {self.areas_number}x{self.areas_number}\n'
             f'step number = {self.n_steps}\n'
             f'window size = {self.window_size}\n'
             f'weight routing mode = {self.weight_routing_mode}\n'
@@ -88,36 +87,6 @@ class Config:
         self._SUMOCFG = f'files/simulations/{simulation_dir}/osm.sumocfg'
         sumo_binary = os.path.join(os.environ['SUMO_HOME'], 'bin', self._SUMOCMD)
         self.sumo_cmd = [sumo_binary, "-c", self._SUMOCFG]
-
-    def init_logger(self, dump_name, save_logs=False):
-        """
-        Init the application logger
-        :param dump_name: The name of the data dump to use 
-        :param save_logs: If save_logs is True, it will save the logs into the logs directory
-        :return:
-        """
-        now = datetime.datetime.now()
-        current_date = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-        if not os.path.exists('files/logs'):
-            os.makedirs('logs')
-
-        log_filename = f'files/logs/{dump_name}_{current_date}.log'
-
-        logger = logging.getLogger(f'sumo_logger_{dump_name}')
-        logger.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        if save_logs:
-            file_handler = logging.FileHandler(log_filename)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-        return logger
 
     def get_ref_emissions(self):
         """

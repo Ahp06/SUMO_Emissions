@@ -30,10 +30,11 @@ from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
 
 class Data: 
     
-    def __init__(self, map_bounds, areas_number,simulation_dir):
+    def __init__(self, dump_name, map_bounds, areas_number,simulation_dir):
         """
         Data constructor
         """
+        self.dump_name = dump_name
         self.map_bounds = map_bounds
         self.areas_number = areas_number
         self.dir = simulation_dir
@@ -109,7 +110,7 @@ class Data:
                                 logics.append(Logic(l, phases))
                             area.add_tl(TrafficLight(tl_id, logics))
                             
-    def save(self, dump_name):
+    def save(self):
         """
         Save simulation data into a json file 
         :param dump_name: The name of your data dump
@@ -120,6 +121,6 @@ class Data:
             os.mkdir(dump_dir)
         
         s = json.dumps(json.loads(jsonpickle.encode(self)), indent=4)  # for pretty JSON 
-        with open(f'{dump_dir}/{dump_name}.json', 'w') as f:
+        with open(f'{dump_dir}/{self.dump_name}.json', 'w') as f:
             f.write(s)
         
