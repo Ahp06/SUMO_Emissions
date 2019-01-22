@@ -201,9 +201,9 @@ def add_options(parser):
                         help='Choose the simulation directory')
     
     parser.add_argument("-run", "--run", type=str,
-                        help='Run a simulation with the dump chosen')
-    parser.add_argument("-c", "--c", nargs='+', type=str,
-                        help='Choose your configuration file from your working directory')
+                        help='Run a simulation process with the dump chosen')
+    parser.add_argument("-c", "--c", metavar =('config1','config2'), nargs='+', type=str,
+                        help='Choose your(s) configuration file(s) from your working directory')
     parser.add_argument("-save", "--save", action="store_true",
                         help='Save the logs into the logs folder')
     parser.add_argument("-csv", "--csv", action="store_true",
