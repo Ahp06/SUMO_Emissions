@@ -182,7 +182,7 @@ def create_dump(dump_name, simulation_dir, areas_number):
         print(f'Dump with name {dump_name} already exist') 
         
     traci.close(False)  
-        
+    
 def add_options(parser):
     """
     Add command line options
@@ -194,10 +194,10 @@ def add_options(parser):
     # Faire que -c soit requis si -run
      
     parser.add_argument("-new_dump", "--new_dump", type=str,
-                        required=False, help='Load and create a new data dump with the configuration file chosen')
-    parser.add_argument("-areas", "--areas", type=int, required=False,
+                        help='Load and create a new data dump with the configuration file chosen')
+    parser.add_argument("-areas", "--areas", type=int,
                         help='Will create a grid with "areas x areas" areas')
-    parser.add_argument("-simulation_dir", "--simulation_dir", type=str, required=False,
+    parser.add_argument("-simulation_dir", "--simulation_dir", type=str,
                         help='Choose the simulation directory')
     
     parser.add_argument("-run", "--run", type=str,
@@ -211,6 +211,22 @@ def add_options(parser):
     parser.add_argument("-csv", "--csv", action="store_true",
                         help="Export all data emissions into a CSV file")
    
+def check_user_entry(args):
+    """
+    Check the user entry consistency
+    """
+    if (args.new_dump is not None):
+        if(args.areas is None or args.simulation_dir is None):
+            print('The -new_dump argument requires the -areas and -simulation_dir options')
+            return False
+        
+    if (args.run is not None):
+        if(args.c is None and args.c_dir is None):
+            print('The -run argument requires the -c or -c_dir')
+            return False
+    
+    return True 
+    
 def main(args):
     """
     The entry point of the application
@@ -221,38 +237,40 @@ def main(args):
     add_options(parser)
     args = parser.parse_args(args)
     
-    if args.new_dump is not None:
-        if (args.simulation_dir is not None) and (args.areas is not None): 
-            create_dump(args.new_dump, args.simulation_dir, args.areas)
-    
-    if args.run is not None:
-        dump_path = f'files/dump/{args.run}.json'
-        if os.path.isfile(dump_path):
-            with open(dump_path, 'r') as f:
-                data = jsonpickle.decode(f.read())
-            
-            process = []
-            files = [] 
-            
-            if args.c is not None: 
-                for config in args.c:
-                    files.append(f'files/configs/{config}') 
-            
-            if args.c_dir is not None: 
-                path = f'files/configs/{args.c_dir}/'
-                bundle_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] 
-                for config in bundle_files:
-                    conf_formatted = config.replace('.json','')
-                    files.append(f'files/configs/{args.c_dir}/{conf_formatted}')
+    if(check_user_entry(args)):
+        
+        if args.new_dump is not None:
+            if (args.simulation_dir is not None) and (args.areas is not None): 
+                create_dump(args.new_dump, args.simulation_dir, args.areas)
+        
+        if args.run is not None:
+            dump_path = f'files/dump/{args.run}.json'
+            if os.path.isfile(dump_path):
+                with open(dump_path, 'r') as f:
+                    data = jsonpickle.decode(f.read())
                 
-            for conf in files: # Initialize all process   
-
-                config = Config(conf,data)  
-                p = RunProcess(data, config,args.save,args.csv)
-                process.append(p)                    
-                p.start()
+                process = []
+                files = [] 
+                
+                if args.c is not None: 
+                    for config in args.c:
+                        files.append(f'files/configs/{config}') 
+                
+                if args.c_dir is not None: 
+                    path = f'files/configs/{args.c_dir}/'
+                    bundle_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] 
+                    for config in bundle_files:
+                        conf_formatted = config.replace('.json','')
+                        files.append(f'files/configs/{args.c_dir}/{conf_formatted}')
                     
-            for p in process : p.join()
+                for conf in files: # Initialize all process   
+    
+                    config = Config(conf,data)  
+                    p = RunProcess(data, config,args.save,args.csv)
+                    process.append(p)                    
+                    p.start()
+                        
+                for p in process : p.join() 
                 
 if __name__ == '__main__':
     main(sys.argv[1:])
