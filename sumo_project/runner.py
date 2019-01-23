@@ -204,6 +204,8 @@ def add_options(parser):
                         help='Run a simulation process with the dump chosen')
     parser.add_argument("-c", "--c", metavar =('config1','config2'), nargs='+', type=str,
                         help='Choose your(s) configuration file(s) from your working directory')
+    parser.add_argument("-c_dir", "--c_dir", type=str,
+                        help='Choose a directory which contains your(s) configuration file(s)')
     parser.add_argument("-save", "--save", action="store_true",
                         help='Save the logs into the logs folder')
     parser.add_argument("-csv", "--csv", action="store_true",
@@ -230,17 +232,27 @@ def main(args):
                 data = jsonpickle.decode(f.read())
             
             process = []
+            files = [] 
             
             if args.c is not None: 
-                for conf in args.c: # Initialize all process   
+                for config in args.c:
+                    files.append(f'files/configs/{config}') 
+            
+            if args.c_dir is not None: 
+                path = f'files/configs/{args.c_dir}/'
+                bundle_files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))] 
+                for config in bundle_files:
+                    conf_formatted = config.replace('.json','')
+                    files.append(f'files/configs/{args.c_dir}/{conf_formatted}')
+                
+            for conf in files: # Initialize all process   
+
+                config = Config(conf,data)  
+                p = RunProcess(data, config,args.save,args.csv)
+                process.append(p)                    
+                p.start()
                     
-                    config = Config(conf,data)  
-                    p = RunProcess(data, config,args.save,args.csv)
-                    process.append(p)                    
-                    p.start()
-                    
-                for p in process : p.join()
-                    
+            for p in process : p.join()
                 
 if __name__ == '__main__':
     main(sys.argv[1:])
