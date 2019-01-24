@@ -42,7 +42,7 @@ class Config:
         :param config_file: The path to your configuration file
         :return:
         """
-        with open(f'files/configs/{config_file}.json', 'r') as f:
+        with open(f'{config_file}.json', 'r') as f:
             data = json.load(f)
 
         for option in data:
