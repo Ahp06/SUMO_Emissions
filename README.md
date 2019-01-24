@@ -35,3 +35,9 @@ Run simulations in parallel with multiple configuration files :
 
 This command will run a simulation dump "dump" with the configuration file(s) "config1" and "config2" 
 with CSV data export and logs backup.
+
+From a folder which contains multiple configuration files : 
+
+![](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/files/imgs/runner_cdir.PNG)
+
+
