@@ -15,7 +15,7 @@ which when the pollution rate exceeds a certain threshold in these then we act o
 
 # How to run 
 
-This application can be launched from an IDE, or from a shell (linux or Windows). 
+This application can be launched from an IDE, or from a shell (linux, Windows, MacOS). 
 You will need a config.json configuration file (see [default_config.json](https://github.com/Ahp06/SUMO_Emissions/blob/master/sumo_project/configs/default_config.json) for a template) and a simulation file.
 You can use your own scenario file (osm.sumocfg file), see : [SUMO Tutorials](http://sumo.dlr.de/wiki/Tutorials). 
 
