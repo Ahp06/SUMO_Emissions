@@ -8,14 +8,11 @@ Created on 17 oct. 2018
 This module defines the global configuration for the simulation
 """
 
-import datetime
 import json
-import logging
 import os
-import sys
 
-from model import Emission
 from data import Data
+from model import Emission
 
 
 class Config:

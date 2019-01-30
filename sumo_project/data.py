@@ -8,15 +8,8 @@ Created on 17 oct. 2018
 This module is used for loading simulation data 
 """
 
-import argparse
-import csv
-import datetime
-import itertools
 import json
 import os
-import pprint
-import sys
-import time
 import traci
 from typing import List
 
@@ -24,8 +17,7 @@ import jsonpickle
 from parse import search
 from shapely.geometry import LineString
 
-import actions
-from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+from model import Area, Lane, TrafficLight, Phase, Logic
 
 
 class Data: 
@@ -33,6 +25,10 @@ class Data:
     def __init__(self, dump_name, map_bounds, areas_number,simulation_dir):
         """
         Data constructor
+        :param dump_name : The dump name chosen by the user
+        :param map_bounds: The bounds of the simulated map 
+        :param areas_number: The number of areas in line and row chosen by the user 
+        :param simulation_dir: The directory which contains all files needed for SUMO
         """
         self.dump_name = dump_name
         self.map_bounds = map_bounds

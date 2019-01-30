@@ -8,6 +8,10 @@ Created on 19 janv. 2019
 This module defines the entry point of the application
 """
 
+"""
+Init the Traci API
+"""
+
 import argparse
 import csv
 import datetime
@@ -26,9 +30,7 @@ from data import Data
 import emissions
 from model import Emission
 
-"""
-Init the Traci API
-"""
+
 if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(tools)
@@ -36,6 +38,9 @@ else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
     
 class RunProcess(multiprocessing.Process):
+    """
+    Run process inheriting from multiprocessing.Process
+    """
     
     def __init__(self, data : Data, config : Config, save_logs, csv_export):
         """
@@ -99,11 +104,14 @@ class RunProcess(multiprocessing.Process):
         
     def run(self):
         """
-        Run a data set
+        Launch a simulation, will be called when a RunProcess instance is started
         """
         try:
             self.init_logger()
             self.logger.info(f'Running simulation dump "{self.data.dump_name}" with the config "{self.config.config_filename}" ...')  
+            
+            if self.config.without_actions_mode:
+                self.logger.info('Reference simulation')
             
             traci.start(self.config.sumo_cmd)
             
@@ -134,20 +142,25 @@ class RunProcess(multiprocessing.Process):
                 total_emissions += area.sum_all_emissions()
                 
             self.logger.info(f'Total emissions = {total_emissions.value()} mg')
+            for pollutant in ['co2','co','nox','hc','pmx']:
+                value = total_emissions.__getattribute__(pollutant)
+                self.logger.info(f'{pollutant.upper()} = {value} mg')
                     
             if not self.config.without_actions_mode:  # If it's not a simulation without actions
                 ref = self.config.get_ref_emissions()
                 if not (ref is None):  # If a reference value exist (add yours into config.py)
                     global_diff = (ref.value() - total_emissions.value()) / ref.value()
                     self.logger.info(f'Global reduction percentage of emissions = {global_diff * 100} %')
-                    self.logger.info(f'-> CO2 emissions = {emissions.get_reduction_percentage(ref.co2, total_emissions.co2)} %')
-                    self.logger.info(f'-> CO emissions = {emissions.get_reduction_percentage(ref.co, total_emissions.co)} %')
-                    self.logger.info(f'-> Nox emissions = {emissions.get_reduction_percentage(ref.nox, total_emissions.nox)} %')
-                    self.logger.info(f'-> HC emissions = {emissions.get_reduction_percentage(ref.hc, total_emissions.hc)} %')
-                    self.logger.info(f'-> PMx emissions = {emissions.get_reduction_percentage(ref.pmx, total_emissions.pmx)} %')    
+                    
+                    for pollutant in ['co2','co','nox','hc','pmx']:
+                        reduc_percentage = emissions.get_reduction_percentage(ref.__getattribute__(pollutant),
+                                                                              total_emissions.__getattribute__(pollutant))
+                        self.logger.info(f'-> {pollutant.upper()} reduction = {reduc_percentage} %')
+                
                 
             simulation_time = round(time.perf_counter() - start, 2)
             self.logger.info(f'End of the simulation ({simulation_time}s)')
+            
             # 1 step is equal to one second simulated
             self.logger.info(f'Real-time factor : {self.config.n_steps / simulation_time}')
             
@@ -189,9 +202,6 @@ def add_options(parser):
     :param parser: The command line parser
     :return:
     """
-    
-    # TODO: Faire que -areas & -simulation_dir soit requis si -new_dump 
-    # Faire que -c soit requis si -run
      
     parser.add_argument("-new_dump", "--new_dump", type=str,
                         help='Load and create a new data dump with the configuration file chosen')

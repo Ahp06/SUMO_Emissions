@@ -20,7 +20,7 @@ from shapely.geometry.base import BaseGeometry
 class Lane:
     """
     The Lane class includes the polygon defining the lane
-    and keep in memory the initial maximum speed on the lane
+    and keep in memory the initial maximum speed of the lane
     """
 
     def __init__(self, lane_id: str, polygon: LineString, initial_max_speed: float):
@@ -257,6 +257,9 @@ class Area:
             (xmin, ymax),
             (xmax, ymax),
             (xmax, ymin)))
+        
+    def infrastructure_changed(self):
+        return (self.limited_speed or self.locked or self.tls_adjusted or self.weight_adjusted)
 
 
 class Vehicle:

@@ -4,16 +4,17 @@ Created on 17 oct. 2018
 @author: Axel Huynh-Phuc, Thibaud Gasser
 """
 
+"""
+This module defines how pollutant emissions are recovered and how we act on the areas 
+"""
+
 import traci
 from typing import List
 
-from shapely.geometry import LineString
-
 import actions
-from config import Config
-from data import Data
-from model import Area, Vehicle, Lane, TrafficLight, Phase, Logic, Emission
+from model import  Vehicle, Emission
 from runner import RunProcess
+
 
 def compute_vehicle_emissions(veh_id):
     """
@@ -43,16 +44,13 @@ def get_all_vehicles() -> List[Vehicle]:
         vehicles.append(vehicle)
     return vehicles
 
-
 def get_emissions(p : RunProcess, vehicles: List[Vehicle], current_step):
     """
     For each area retrieves the acquired emissions in the window,
     and acts according to the configuration chosen by the user
-    :param grid: The list of areas
+    :param p: The current process
     :param vehicles: The list of vehicles
     :param current_step: The simulation current step
-    :param config: The simulation configuration
-    :param logger: The simulation logger
     :return:
     """
     for area in p.data.grid:
@@ -86,8 +84,10 @@ def get_emissions(p : RunProcess, vehicles: List[Vehicle], current_step):
             traci.polygon.setFilled(area.name, True)
 
         else:
-            actions.reverse_actions(area)
-            traci.polygon.setFilled(area.name, False)
+            if area.infrastructure_changed():
+                p.logger.info(f'Action - Reversed actions into area {area.name}')
+                actions.reverse_actions(area)
+                traci.polygon.setFilled(area.name, False)
 
 
 def get_reduction_percentage(ref, total):
