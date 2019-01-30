@@ -20,13 +20,11 @@ vehicle_classes = {
         '--prefix': 'veh',
         '--min-distance': 300,
         '--trip-attributes': 'departLane="best"',
-        # '--validate': True
     },
     'bus': {
         '--vehicle-class': 'bus',
         '--vclass': 'bus',
         '--prefix': 'bus',
-        # '--validate': True
     },
     'truck': {
         '--vehicle-class': 'truck',
@@ -34,7 +32,6 @@ vehicle_classes = {
         '--prefix': 'truck',
         '--min-distance': 600,
         '--trip-attributes': 'departLane="best"',
-        # '--validate': True
     }
 }
 
@@ -42,6 +39,7 @@ vehicle_classes = {
 class RandomTripsGenerator:
     def __init__(self, netpath, routepath, output, vclass, density, *flags, **opts):
         self.vclass = vclass
+        self.density = density
         self.options = {
             # Default options
             '--net-file': netpath,
@@ -58,7 +56,7 @@ class RandomTripsGenerator:
         self.options[opt_name] = value
 
     def generate(self):
-        print(f'Generating trips for vehicle class {self.vclass}')
+        print(f'Generating trips for vehicle class {self.vclass} with density of {self.density} veh/km/h')
         randomTrips.main(randomTrips.get_options(dict_to_list(self.options) + self.flags))
 
     def _init_trips(self, edges, vclass, density):
@@ -159,12 +157,13 @@ def generate_mobility(out_path, name, vclasses):
     output = os.path.join(out_path, f'{name}.trips.xml')
     routefiles = []
     end_time = 200
-    for vclass in vclasses:
+    for vclass, density in vclasses.items():
         # simname.bus.rou.xml, simname.passenger.rou.xml, ...
         routefile = f'{name}.{vclass}.rou.xml'
         routepath = os.path.join(out_path, routefile)
         routefiles.append(routefile)
-        generator = RandomTripsGenerator(netpath, routepath, output, vclass, 10.0, '-l', **{'--end': end_time})
+        generator = RandomTripsGenerator(netpath, routepath, output, vclass, float(density), '-l', '--validate',
+                                         **{'--end': end_time})
         generator.generate()
     return routefiles
 
@@ -196,7 +195,7 @@ def dict_to_list(d):
     return [item for k in d for item in (k, d[k])]
 
 
-def main():
+def parse_command_line():
     parser = argparse.ArgumentParser()
     parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
     parser.add_argument('--path', help='Where to generate the files')
@@ -209,8 +208,8 @@ def main():
                              'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
                              'available: passenger, truck, bus.')
     options = parser.parse_args()
-    # If no vehicle classes are specified, use 'passenger' as a default
-    options.vclasses = options.vclasses or ('passenger',)
+    # If no vehicle classes are specified, use 'passenger' as a default with a density of 10 cars/km/h.
+    options.vclasses = options.vclasses or {'passenger': 10}
     # Delete simul_dir if it already exists
     simul_dir = os.path.join(options.path, options.name)
     if os.path.isdir(simul_dir):
@@ -220,5 +219,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-
+    parse_command_line()
