@@ -86,7 +86,8 @@ class GenerationTests(unittest.TestCase):
         osm_file = os.path.join(SCRIPTDIR, 'sample.osm')
         trips_file = os.path.join(self.sim_path, f'{self.sim_name}.trips.xml')
         configurator.generate_scenario(osm_file, self.sim_path, self.sim_name)
-        routefiles = configurator.generate_mobility(self.sim_path, self.sim_name, vclasses=('passenger', 'truck'))
+        classes = {'passenger': 10, 'truck': 1}
+        routefiles = configurator.generate_mobility(self.sim_path, self.sim_name, vclasses=classes)
 
         self.assert_is_file(trips_file)
         for f in routefiles:
