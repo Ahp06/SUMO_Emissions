@@ -113,8 +113,11 @@ def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=F
     root = sumoconfig.getroot()
     root.find('input/net-file').set('value', f'{simulation_name}.net.xml')
     root.find('input/route-files').set('value', ','.join(routefiles))
+    additional = root.find('input/additional-files')
     if generate_polygons:
-        root.find('input/additional-files').set('value', f'{simulation_name}.poly.xml')
+        additional.set('value', f'{simulation_name}.poly.xml')
+    else:
+        root.find('input').remove(additional)
     root.find('report/log').set('value', f'{simulation_name}.log')
     return sumoconfig
 
@@ -198,21 +201,24 @@ def main():
     parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
     parser.add_argument('--path', help='Where to generate the files')
     parser.add_argument('--name', required=True, help='Name of the SUMO scenario to generate')
-    parser.add_argument('--generate-polygons', default=False)
+    parser.add_argument('--generate-polygons', default=False, action='store_true', help='Whether to generate polygons '
+                        'and POIs (defaults to false).')
     parser.add_argument('--vclass', dest='vclasses', action=StoreDictKeyPair,
                         nargs="+", metavar="VCLASS=DENSITY",
                         help='Generate this vclass with given density, in pair form vclass=density. The density is '
-                             'given in vehicles per hour per kilometer.')
+                             'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
+                             'available: passenger, truck, bus.')
     options = parser.parse_args()
     # If no vehicle classes are specified, use 'passenger' as a default
-    vclasses = options.vclasses or ('passenger',)
-    # FIXME Delete simul_dir if it already exists
+    options.vclasses = options.vclasses or ('passenger',)
+    # Delete simul_dir if it already exists
     simul_dir = os.path.join(options.path, options.name)
     if os.path.isdir(simul_dir):
-        input(f'{simul_dir} already exists ! Press Enter to overwrite...')
+        input(f'{simul_dir} already exists ! Press Enter to delete...')
         shutil.rmtree(simul_dir)
     generate_all(options)
 
 
 if __name__ == '__main__':
     main()
+
