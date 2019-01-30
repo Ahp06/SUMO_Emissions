@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import tempfile
+from sys import argv
+from types import SimpleNamespace
 from xml.etree import ElementTree
 
 import randomTrips
@@ -176,11 +179,15 @@ def generate_sumo_configuration(routefiles, path, scenario_name, generate_polygo
 def generate_all(args):
     simulation_name = args.name
     simulation_dir = os.path.join(args.path, simulation_name)
+    try:
+        generate_polygons = args.generate_polygons
+    except AttributeError:
+        generate_polygons = False
     osm_file = args.osmfile
     logs_dir = os.path.join(simulation_dir, 'log')
-    generate_scenario(osm_file, simulation_dir, simulation_name, args.generate_polygons)
+    generate_scenario(osm_file, simulation_dir, simulation_name, generate_polygons)
     routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses)
-    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, args.generate_polygons)
+    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, )
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
 
@@ -208,6 +215,10 @@ def parse_command_line():
                              'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
                              'available: passenger, truck, bus.')
     options = parser.parse_args()
+    handle_args(options)
+
+
+def handle_args(options):
     # If no vehicle classes are specified, use 'passenger' as a default with a density of 10 cars/km/h.
     options.vclasses = options.vclasses or {'passenger': 10}
     # Delete simul_dir if it already exists
@@ -218,5 +229,20 @@ def parse_command_line():
     generate_all(options)
 
 
+def parse_json(json_file):
+    config = SimpleNamespace(**json.load(json_file))
+    handle_args(config)
+
+
 if __name__ == '__main__':
-    parse_command_line()
+    if len(argv) > 2:
+        # Try to load the config file
+        if argv[1] == '-c' or '--config' or '-config':
+            try:
+                with open(argv[2]) as jsonfile:
+                    parse_json(jsonfile)
+            except FileNotFoundError:
+                raise FileNotFoundError(f'The config file {argv[2]} does not exist!')
+    else:
+        # Run with command line arguments
+        parse_command_line()
