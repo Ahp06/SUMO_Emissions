@@ -143,7 +143,7 @@ def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=F
         root.find('input').remove(additional)
     root.find('report/log').set('value', f'{simulation_name}.log')
     # Set the seed for the random number generator. By default, use the current time
-    root.find('random_number/seed').set('value', seed or str(time.time()))
+    root.find('random_number/seed').set('value', seed or str(int(time.time())))
     return sumoconfig
 
 
@@ -180,12 +180,11 @@ def generate_polygons_(osm_file, scenario_name, dest):
     subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def generate_mobility(out_path, name, vclasses):
+def generate_mobility(out_path, name, vclasses, end_time):
     netfile = f'{name}.net.xml'
     netpath = os.path.join(out_path, netfile)
     output = os.path.join(out_path, f'{name}.trips.xml')
     routefiles = []
-    end_time = 200
     for vclass, density in vclasses.items():
         # simname.bus.rou.xml, simname.passenger.rou.xml, ...
         routefile = f'{name}.{vclass}.rou.xml'
@@ -216,7 +215,7 @@ def generate_all(args):
     logs_dir = os.path.join(simulation_dir, 'log')
 
     generate_scenario(osm_file, simulation_dir, simulation_name, generate_polygons)
-    routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses)
+    routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses, args.end)
     generate_sumo_configuration(routefiles, simulation_dir, simulation_name, generate_polygons)
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
@@ -245,6 +244,7 @@ def parse_command_line(args=None):
                              'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
                              'available: passenger, truck, bus.')
     parser.add_argument('--seed', help='Initializes the random number generator.')
+    parser.add_argument('-e', '--end', type=int, default=200, help='end time (default 200)')
     return parser.parse_args(args=args)
 
 
