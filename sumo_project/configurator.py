@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 import argparse
+import datetime
 import json
+import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from sys import argv
@@ -13,10 +16,28 @@ from xml.etree import ElementTree
 import randomTrips
 import sumolib
 
+if 'SUMO_HOME' in os.environ:
+    TOOLSDIR = os.path.join(os.environ['SUMO_HOME'], 'tools')
+    sys.path.append(TOOLSDIR)
+else:
+    sys.exit("Please declare environment variable 'SUMO_HOME'")
+
 # Absolute path of the directory the script is in
 SCRIPTDIR = os.path.dirname(__file__)
 TEMPLATEDIR = os.path.join(SCRIPTDIR, 'templates')
 
+# Init logger
+logfile = os.path.join(SCRIPTDIR, f'files/logs/configurator_{datetime.datetime.utcnow().isoformat()}.log')
+logging.basicConfig(
+    filename=logfile,
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+"""
+Definition of vehicle classes. 
+See http://sumo.dlr.de/wiki/Definition_of_Vehicles,_Vehicle_Types,_and_Routes#Abstract_Vehicle_Class
+"""
 vehicle_classes = {
     'passenger': {
         '--vehicle-class': 'passenger',
@@ -56,11 +77,8 @@ class RandomTripsGenerator:
         self._init_trips(edges, vclass, density)
         self.options.update(vehicle_classes[self.vclass])
 
-    def add_option(self, opt_name, value):
-        self.options[opt_name] = value
-
     def generate(self):
-        print(f'Generating trips for vehicle class {self.vclass} with density of {self.density} veh/km/h')
+        logging.info(f'Generating trips for vehicle class {self.vclass} with density of {self.density} veh/km/h')
         randomTrips.main(randomTrips.get_options(dict_to_list(self.options) + self.flags))
 
     def _init_trips(self, edges, vclass, density):
@@ -74,10 +92,10 @@ class RandomTripsGenerator:
             if edge.allows(vclass):
                 length += edge.getLaneNumber() * edge.getLength()
 
-        print(f'density = {density}')
+        logging.debug(f'density = {density}')
         period = 3600 / (length / 1000) / density
-        print(f'Period computed for network : {period}, vclass={self.vclass}')
-        self.flags.extend(['-p', period])
+        logging.debug(f'Period computed for network : {period}, vclass={self.vclass}')
+        self.options.update({'-p': period})
 
 
 class StoreDictKeyPair(argparse.Action):
@@ -136,8 +154,9 @@ def generate_scenario(osm_file, out_path, scenario_name, generate_polygons=False
         # Copy typemaps to tempdir
         shutil.copytree(os.path.join(TEMPLATEDIR, 'typemap'), os.path.join(tmpdirname, 'typemap'))
         # Call NETCONVERT
-        print("Generate network...")
+        logging.info("Generating network…")
         netconvertcmd = ['netconvert', '-c', netconfig]
+        logging.debug(f'Calling {" ".join(netconvertcmd)}')
         subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Optionaly generate polygons
         if generate_polygons:
@@ -152,8 +171,9 @@ def generate_polygons_(osm_file, scenario_name, dest):
     poly_template = load_polyconvert_template(osm_file, 'typemap/osmPolyconvert.typ.xml', scenario_name)
     poly_template.write(polyconfig)
     # Call POLYCONVERT
-    print('Generate polygons...')
+    logging.info('Generating polygons…')
     polyconvert_cmd = ['polyconvert', '-c', polyconfig]
+    logging.debug(f'Calling {" ".join(polyconvert_cmd)}')
     subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
@@ -168,14 +188,17 @@ def generate_mobility(out_path, name, vclasses):
         routefile = f'{name}.{vclass}.rou.xml'
         routepath = os.path.join(out_path, routefile)
         routefiles.append(routefile)
-        generator = RandomTripsGenerator(netpath, routepath, output, vclass, float(density), '-l', '--validate',
-                                         **{'--end': end_time})
+        logging.debug(routefile)
+        generator = RandomTripsGenerator(netpath, routepath, output, vclass, float(density))
+        generator.flags.append('-l')
+        generator.flags.append('--validate')
+        generator.options.update(**{'--end': end_time})
         generator.generate()
     return routefiles
 
 
-def generate_sumo_configuration(routefiles, path, scenario_name, generate_polygons=False):
-    sumo_template = load_sumoconfig_template(scenario_name, routefiles=routefiles, generate_polygons=False)
+def generate_sumo_configuration(routefiles, path, scenario_name, generate_polygons):
+    sumo_template = load_sumoconfig_template(scenario_name, routefiles, generate_polygons)
     sumo_template.write(os.path.join(path, f'{scenario_name}.sumocfg'))
 
 
@@ -188,9 +211,10 @@ def generate_all(args):
         generate_polygons = False
     osm_file = args.osmfile
     logs_dir = os.path.join(simulation_dir, 'log')
+
     generate_scenario(osm_file, simulation_dir, simulation_name, generate_polygons)
     routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses)
-    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, generate_polygons, )
+    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, generate_polygons)
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
 
@@ -210,8 +234,8 @@ def parse_command_line():
     parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
     parser.add_argument('--path', help='Where to generate the files')
     parser.add_argument('--name', required=True, help='Name of the SUMO scenario to generate')
-    parser.add_argument('--generate-polygons', default=False, action='store_true', help='Whether to generate polygons '
-                        'and POIs (defaults to false).')
+    parser.add_argument('--generate-polygons', default=False, action='store_true',
+                        help='Whether to generate polygons and POIs (defaults to false).')
     parser.add_argument('--vclass', dest='vclasses', action=StoreDictKeyPair,
                         nargs="+", metavar="VCLASS=DENSITY",
                         help='Generate this vclass with given density, in pair form vclass=density. The density is '
@@ -230,11 +254,14 @@ def handle_args(options):
     if os.path.isdir(simul_dir):
         input(f'{simul_dir} already exists ! Press Enter to delete...')
         shutil.rmtree(simul_dir)
+    logging.debug(f'Options : {options}')
     generate_all(options)
 
 
 def parse_json(json_file):
+    logging.info(f'Loading config from {json_file}')
     config = SimpleNamespace(**json.load(json_file))
+    logging.debug(f'Config {config}')
     handle_args(config)
 
 
@@ -246,7 +273,9 @@ if __name__ == '__main__':
                 with open(argv[2]) as jsonfile:
                     parse_json(jsonfile)
             except FileNotFoundError:
-                raise FileNotFoundError(f'The config file {argv[2]} does not exist!')
+                msg = f'The config file {argv[2]} does not exist!'
+                logging.fatal(msg)
+                raise FileNotFoundError(msg)
     else:
         # Run with command line arguments
         parse_command_line()
