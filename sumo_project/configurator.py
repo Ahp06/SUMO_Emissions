@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
+import os
+import sys
+
+if 'SUMO_HOME' in os.environ:
+    TOOLSDIR = os.path.join(os.environ['SUMO_HOME'], 'tools')
+    sys.path.append(TOOLSDIR)
+else:
+    sys.exit("Please declare environment variable 'SUMO_HOME'")
+
+
 import argparse
 import datetime
 import json
 import logging
-import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from sys import argv
@@ -16,15 +24,10 @@ from xml.etree import ElementTree
 import randomTrips
 import sumolib
 
-if 'SUMO_HOME' in os.environ:
-    TOOLSDIR = os.path.join(os.environ['SUMO_HOME'], 'tools')
-    sys.path.append(TOOLSDIR)
-else:
-    sys.exit("Please declare environment variable 'SUMO_HOME'")
-
 # Absolute path of the directory the script is in
 SCRIPTDIR = os.path.dirname(__file__)
 TEMPLATEDIR = os.path.join(SCRIPTDIR, 'templates')
+SUMOBIN = os.path.join(os.environ['SUMO_HOME'], 'bin')
 
 # Init logger
 logfile = os.path.join(SCRIPTDIR, f'files/logs/configurator_{datetime.datetime.utcnow().isoformat()}.log')
@@ -155,7 +158,7 @@ def generate_scenario(osm_file, out_path, scenario_name, generate_polygons=False
         shutil.copytree(os.path.join(TEMPLATEDIR, 'typemap'), os.path.join(tmpdirname, 'typemap'))
         # Call NETCONVERT
         logging.info("Generating network…")
-        netconvertcmd = ['netconvert', '-c', netconfig]
+        netconvertcmd = [os.path.join(SUMOBIN, 'netconvert'), '-c', netconfig]
         logging.debug(f'Calling {" ".join(netconvertcmd)}')
         subprocess.run(netconvertcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Optionaly generate polygons
@@ -172,7 +175,7 @@ def generate_polygons_(osm_file, scenario_name, dest):
     poly_template.write(polyconfig)
     # Call POLYCONVERT
     logging.info('Generating polygons…')
-    polyconvert_cmd = ['polyconvert', '-c', polyconfig]
+    polyconvert_cmd = [os.path.join(SUMOBIN, 'polyconvert'), '-c', polyconfig]
     logging.debug(f'Calling {" ".join(polyconvert_cmd)}')
     subprocess.run(polyconvert_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -229,7 +232,7 @@ def dict_to_list(d):
     return [item for k in d for item in (k, d[k])]
 
 
-def parse_command_line():
+def parse_command_line(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('osmfile', help='Path to the .osm file to convert to a SUMO simulation')
     parser.add_argument('--path', help='Where to generate the files')
@@ -242,8 +245,7 @@ def parse_command_line():
                              'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
                              'available: passenger, truck, bus.')
     parser.add_argument('--seed', help='Initializes the random number generator.')
-    options = parser.parse_args()
-    handle_args(options)
+    return parser.parse_args(args=args)
 
 
 def handle_args(options):
@@ -262,20 +264,21 @@ def parse_json(json_file):
     logging.info(f'Loading config from {json_file}')
     config = SimpleNamespace(**json.load(json_file))
     logging.debug(f'Config {config}')
-    handle_args(config)
+    return config
 
 
 if __name__ == '__main__':
-    if len(argv) > 2:
-        # Try to load the config file
-        if argv[1] == '-c' or '--config' or '-config':
+    # Try to load the config file
+    if len(argv) > 2 and argv[1] == '-c' or argv[1] == '--config' or argv[1] == '-config':
             try:
                 with open(argv[2]) as jsonfile:
-                    parse_json(jsonfile)
+                    config = parse_json(jsonfile)
+                handle_args(config)
             except FileNotFoundError:
                 msg = f'The config file {argv[2]} does not exist!'
                 logging.fatal(msg)
                 raise FileNotFoundError(msg)
     else:
         # Run with command line arguments
-        parse_command_line()
+        config = parse_command_line()
+        handle_args(config)
