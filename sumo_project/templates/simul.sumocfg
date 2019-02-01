@@ -24,7 +24,7 @@
     </report>
 
     <random_number>
-        <seed value="42"/>
+        <seed value=""/>
     </random_number>
 
 </configuration>

@@ -41,6 +41,11 @@ class TemplateTests(unittest.TestCase):
         self.assertEqual(tree.find('input/route-files').get('value'), ','.join(routefiles))
         self.assertEqual(tree.find('report/log').get('value'), f'{self.sim_name}.log')
 
+    def test_load_sumoconfig_template_with_seed(self):
+        routefiles = (f'{self.sim_name}.bus.rou.xml', f'{self.sim_name}.passenger.rou.xml')
+        tree = configurator.load_sumoconfig_template(self.sim_name, routefiles, seed=42)
+        self.assertEqual(tree.find('random_number/seed').get('value'), 42)
+
     def test_load_polyconvert_template(self):
         tree = configurator.load_polyconvert_template(
             osm_file=f'{self.sim_name}.osm',

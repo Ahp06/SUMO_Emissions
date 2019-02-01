@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from sys import argv
 from types import SimpleNamespace
 from xml.etree import ElementTree
@@ -108,7 +109,7 @@ def load_polyconvert_template(osm_file, type_file, scenario_name):
     return polyconfig
 
 
-def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=False):
+def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=False, seed=None):
     routefiles = routefiles or (f'{simulation_name}.rou.xml',)
     sumoconfig = ElementTree.parse(os.path.join(TEMPLATEDIR, 'simul.sumocfg'))
     root = sumoconfig.getroot()
@@ -120,6 +121,8 @@ def load_sumoconfig_template(simulation_name, routefiles=(), generate_polygons=F
     else:
         root.find('input').remove(additional)
     root.find('report/log').set('value', f'{simulation_name}.log')
+    # Set the seed for the random number generator. By default, use the current time
+    root.find('random_number/seed').set('value', seed or str(time.time()))
     return sumoconfig
 
 
@@ -187,7 +190,7 @@ def generate_all(args):
     logs_dir = os.path.join(simulation_dir, 'log')
     generate_scenario(osm_file, simulation_dir, simulation_name, generate_polygons)
     routefiles = generate_mobility(simulation_dir, simulation_name, args.vclasses)
-    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, )
+    generate_sumo_configuration(routefiles, simulation_dir, simulation_name, generate_polygons, )
     # Move all logs to logdir
     move_logs(simulation_dir, logs_dir)
 
@@ -214,6 +217,7 @@ def parse_command_line():
                         help='Generate this vclass with given density, in pair form vclass=density. The density is '
                              'given in vehicles per hour per kilometer. For now, the following vehicle classes are '
                              'available: passenger, truck, bus.')
+    parser.add_argument('--seed', help='Initializes the random number generator.')
     options = parser.parse_args()
     handle_args(options)
 
