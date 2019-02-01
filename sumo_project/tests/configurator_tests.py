@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import tempfile
@@ -108,6 +109,34 @@ class GenerationTests(unittest.TestCase):
     def assert_is_dir(self, path):
         self.assert_exists(path)
         self.assertTrue(os.path.isdir(path), msg=f'{path} is not a directory')
+
+
+class InputTests(unittest.TestCase):
+    def test_commandline(self):
+        options = ['--name', 'test-config', '--path', '/some/path', '--vclass', 'passenger=10', 'truck=1', '--', 'test.osm']
+        actual_conf = configurator.parse_command_line(options)
+        self.assertEqual(actual_conf.name, 'test-config')
+        self.assertEqual(actual_conf.osmfile, 'test.osm')
+        self.assertEqual(actual_conf.path, '/some/path')
+        self.assertEqual(actual_conf.vclasses, {'passenger': '10', 'truck': '1'})
+
+    def test_from_config_file(self):
+        options = """
+        {
+            "name": "test-config",
+            "path": "/some/path",
+            "vclasses": {
+                "passenger": 10,
+                "truck": 1
+            },
+            "osmfile": "test.osm"
+        }
+        """
+        actual_conf = configurator.parse_json(io.StringIO(options))
+        self.assertEqual(actual_conf.name, 'test-config')
+        self.assertEqual(actual_conf.osmfile, 'test.osm')
+        self.assertEqual(actual_conf.path, '/some/path')
+        self.assertEqual(actual_conf.vclasses, {'passenger': 10, 'truck': 1})
 
 
 if __name__ == '__main__':
