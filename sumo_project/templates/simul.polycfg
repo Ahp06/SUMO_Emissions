@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/polyconvertConfiguration.xsd">
+
+    <input>
+        <net-file value="simul.net.xml"/>
+        <osm-files value="simul.raw.osm"/>
+        <type-file value="typemap/osmPolyconvert.typ.xml"/>
+    </input>
+
+    <output>
+        <output-file value="simul.poly.xml"/>
+    </output>
+
+    <processing>
+        <ignore-errors value="true"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <log value="polyconvert.log"/>
+    </report>
+
+</configuration>
